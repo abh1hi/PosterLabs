@@ -2,10 +2,154 @@
 
 /* Optional: Hide scrollbar utility */
 .hide-scrollbar::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 .hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+:root {
+    /* Transitions */
+    --transition-speed: 0.3s;
+    --transition-ease: ease-in-out;
+
+    /* Light Theme Defaults */
+    --bg-page: #f3f4f6;
+    /* gray-100 */
+    --bg-panel: #ffffff;
+    /* white */
+    --bg-surface: #f9fafb;
+    /* gray-50 */
+    --bg-input: #ffffff;
+    --fg-primary: #111827;
+    /* gray-900 */
+    --fg-secondary: #4b5563;
+    /* gray-600 */
+    --border-color: #e5e7eb;
+    /* gray-200 */
+
+    /* Material Web Light Matches */
+    --md-sys-color-primary: #2563eb;
+    /* blue-600 */
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #dbeafe;
+    /* blue-100 */
+    --md-sys-color-on-primary-container: #1e3a8a;
+    /* blue-900 */
+
+    --md-sys-color-secondary: #475569;
+    /* slate-600 */
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #e2e8f0;
+    /* slate-200 */
+    --md-sys-color-on-secondary-container: #1e293b;
+    /* slate-800 */
+
+    --md-sys-color-surface: #ffffff;
+    --md-sys-color-on-surface: #111827;
+    --md-sys-color-surface-variant: #f3f4f6;
+    --md-sys-color-on-surface-variant: #4b5563;
+
+    --md-sys-color-outline: #9ca3af;
+    --md-sys-color-outline-variant: #e5e7eb;
+
+    --md-ref-typeface-plain: 'Inter', system-ui, sans-serif;
+
+    /* Component Overrides Light */
+    --md-filled-text-field-container-color: #f3f4f6;
+    --md-filled-text-field-input-text-color: #111827;
+    --md-filled-text-field-label-text-color: #6b7280;
+    --md-filled-text-field-focus-label-text-color: #2563eb;
+    --md-filled-text-field-focus-active-indicator-color: #2563eb;
+
+    --md-outlined-select-container-color: #ffffff;
+    --md-outlined-select-text-color: #111827;
+    --md-outlined-select-label-text-color: #6b7280;
+    --md-outlined-select-focus-label-text-color: #2563eb;
+    --md-outlined-select-outline-color: #d1d5db;
+
+    /* Menu */
+    --md-menu-container-color: #ffffff;
+    --md-menu-item-label-text-color: #111827;
+}
+
+:root.dark {
+    /* Dark Theme Overrides */
+    --bg-page: #111827;
+    /* gray-900 */
+    --bg-panel: #1f2937;
+    /* gray-800 */
+    --bg-surface: #374151;
+    /* gray-700 */
+    --bg-input: #111827;
+    --fg-primary: #ffffff;
+    --fg-secondary: #9ca3af;
+    /* gray-400 */
+    --border-color: #374151;
+    /* gray-700 */
+
+    /* Material Web Dark Matches */
+    --md-sys-color-primary: #60a5fa;
+    /* blue-400 */
+    --md-sys-color-on-primary: #0f172a;
+    /* gray-900 */
+    --md-sys-color-primary-container: #1e3a8a;
+    /* blue-900 */
+    --md-sys-color-on-primary-container: #dbeafe;
+    /* blue-100 */
+
+    --md-sys-color-secondary: #94a3b8;
+    /* gray-400 */
+    --md-sys-color-on-secondary: #0f172a;
+    --md-sys-color-secondary-container: #334155;
+    /* gray-700 */
+    --md-sys-color-on-secondary-container: #f1f5f9;
+    /* gray-100 */
+
+    --md-sys-color-surface: #1f2937;
+    /* gray-800 */
+    --md-sys-color-on-surface: #e2e8f0;
+    /* gray-200 */
+    --md-sys-color-surface-variant: #374151;
+    /* gray-700 */
+    --md-sys-color-on-surface-variant: #9ca3af;
+    /* gray-400 */
+
+    --md-sys-color-outline: #4b5563;
+    /* gray-600 */
+    --md-sys-color-outline-variant: #374151;
+
+    /* Component Overrides Dark */
+    --md-filled-text-field-container-color: #111827;
+    --md-filled-text-field-input-text-color: #f3f4f6;
+    --md-filled-text-field-label-text-color: #9ca3af;
+    --md-filled-text-field-focus-label-text-color: #60a5fa;
+    --md-filled-text-field-focus-active-indicator-color: #60a5fa;
+
+    --md-outlined-select-container-color: #111827;
+    --md-outlined-select-text-color: #f3f4f6;
+    --md-outlined-select-label-text-color: #9ca3af;
+    --md-outlined-select-focus-label-text-color: #60a5fa;
+    --md-outlined-select-outline-color: #374151;
+
+    --md-menu-container-color: #1f2937;
+    --md-menu-item-label-text-color: #e2e8f0;
+}
+
+body {
+    margin: 0;
+    overscroll-behavior: none;
+    background-color: var(--bg-page);
+    color: var(--fg-primary);
+    transition: background-color var(--transition-speed) var(--transition-ease), color var(--transition-speed) var(--transition-ease);
+}
+
+/* Global Transition Utility class for components */
+.theme-transition {
+    transition: background-color var(--transition-speed) var(--transition-ease),
+        border-color var(--transition-speed) var(--transition-ease),
+        color var(--transition-speed) var(--transition-ease),
+        box-shadow var(--transition-speed) var(--transition-ease);
 }
