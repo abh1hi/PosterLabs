@@ -1,0 +1,5 @@
+﻿src/App.vue(28,9): error TS6133: 'posterSize' is declared but its value is never read.
+src/App.vue(28,21): error TS6133: 'bgColor' is declared but its value is never read.
+src/App.vue(29,9): error TS6133: 'elements' is declared but its value is never read.
+src/App.vue(30,17): error TS6133: 'showToast' is declared but its value is never read.
+src/App.vue(31,7): error TS6198: All destructured elements are unused.

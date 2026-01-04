@@ -1,0 +1,53 @@
+﻿src/App.vue(2,15): error TS6133: 'computed' is declared but its value is never read.
+src/App.vue(14,31): error TS6133: 'ImageIcon' is declared but its value is never read.
+src/App.vue(15,3): error TS6133: 'ChevronLeft' is declared but its value is never read.
+src/App.vue(16,17): error TS6133: 'Download' is declared but its value is never read.
+src/App.vue(28,54): error TS6133: 'activeTool' is declared but its value is never read.
+src/App.vue(33,7): error TS6133: 'handleExport' is declared but its value is never read.
+src/App.vue(60,7): error TS6133: 'handleImport' is declared but its value is never read.
+src/components/Editor/CanvasArea.vue(12,14): error TS6133: 'isPanning' is declared but its value is never read.
+src/components/Editor/CanvasArea.vue(48,4): error TS2345: Argument of type '{ class: string; ref: string; onTouchstart: (e: MouseEvent) => void; onMousedown: (e: MouseEvent) => void; }' is not assignable to parameter of type 'HTMLAttributes & ReservedProps & Record<string, unknown>'.
+  Type '{ class: string; ref: string; onTouchstart: (e: MouseEvent) => void; onMousedown: (e: MouseEvent) => void; }' is not assignable to type 'HTMLAttributes'.
+    Types of property 'onTouchstart' are incompatible.
+      Type '(e: MouseEvent) => void' is not assignable to type '(payload: TouchEvent) => void'.
+        Types of parameters 'e' and 'payload' are incompatible.
+          Type 'TouchEvent' is missing the following properties from type 'MouseEvent': button, buttons, clientX, clientY, and 15 more.
+src/components/Editor/RenderElement.vue(2,20): error TS6133: 'onMounted' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(2,31): error TS6133: 'ref' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(4,1): error TS6133: 'useCanvas' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(6,34): error TS6133: 'MoreHorizontal' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(6,67): error TS6133: 'EyeOff' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(45,23): error TS6133: 'e' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(2,15): error TS6133: 'onMounted' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(2,36): error TS6133: 'watch' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(6,30): error TS6133: 'Search' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(6,38): error TS6133: 'Plus' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(6,44): error TS6133: 'Bold' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(6,50): error TS6133: 'Italic' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(7,39): error TS6133: 'Crop' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(7,45): error TS6133: 'FlipHorizontal' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(7,61): error TS6133: 'FlipVertical' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,3): error TS6133: 'Droplet' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,27): error TS6133: 'Monitor' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,36): error TS6133: 'Square' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,44): error TS6133: 'Circle' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,52): error TS6133: 'Triangle' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,62): error TS6133: 'Star' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(8,68): error TS6133: 'Hexagon' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(9,3): error TS6133: 'Layout' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(9,54): error TS6133: 'Lock' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(9,60): error TS6133: 'Unlock' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(10,12): error TS6133: 'Settings' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(12,1): error TS6192: All imports in import declaration are unused.
+src/components/UI/QuickActions.vue(16,43): error TS2345: Argument of type '{ id: string; type: "text" | "image" | "shape"; content?: string | undefined; src?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; fontFamily?: string | undefined; ... 24 more ...; shapeType?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefined; order?...' is not assignable to parameter of type '{ id: string; type: "text" | "image" | "shape"; content?: string | undefined; src?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; fontFamily?: string | undefined; ... 24 more ...; shapeType?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefined; order?...'.
+  Type 'undefined' is not assignable to type '{ id: string; type: "text" | "image" | "shape"; content?: string | undefined; src?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; fontFamily?: string | undefined; ... 24 more ...; shapeType?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefined; order?...'.
+src/components/UI/QuickActions.vue(26,43): error TS2345: Argument of type '{ id: string; type: "text" | "image" | "shape"; content?: string | undefined; src?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; fontFamily?: string | undefined; ... 24 more ...; shapeType?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefined; order?...' is not assignable to parameter of type '{ id: string; type: "text" | "image" | "shape"; content?: string | undefined; src?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; fontFamily?: string | undefined; ... 24 more ...; shapeType?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefined; order?...'.
+  Type 'undefined' is not assignable to type '{ id: string; type: "text" | "image" | "shape"; content?: string | undefined; src?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; fontFamily?: string | undefined; ... 24 more ...; shapeType?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefined; order?...'.
+src/components/UI/Toolbar.vue(2,15): error TS6133: 'watch' is declared but its value is never read.
+src/components/UI/Toolbar.vue(7,3): error TS6133: 'Type' is declared but its value is never read.
+src/components/UI/Toolbar.vue(7,20): error TS6133: 'SlidersHorizontal' is declared but its value is never read.
+src/components/UI/Toolbar.vue(8,11): error TS6133: 'Plus' is declared but its value is never read.
+src/components/UI/Toolbar.vue(8,17): error TS6133: 'Sparkles' is declared but its value is never read.
+src/components/UI/Toolbar.vue(8,43): error TS6133: 'Palette' is declared but its value is never read.
+src/components/UI/Toolbar.vue(17,21): error TS6133: 'selectedId' is declared but its value is never read.
+src/components/UI/Toolbar.vue(18,21): error TS6133: 'isShapesLibraryOpen' is declared but its value is never read.

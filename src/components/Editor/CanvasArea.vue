@@ -1,304 +1,197 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useElements } from '../../composables/useElements'
 import { useCanvas } from '../../composables/useCanvas'
 import RenderElement from './RenderElement.vue'
-import { RotateCcw, ZoomIn, ZoomOut, Layers } from 'lucide-vue-next'
+import { ZoomIn, ZoomOut, Maximize, MousePointer2, Hand } from 'lucide-vue-next'
 import '@material/web/iconbutton/icon-button.js'
-import '@material/web/icon/icon.js'
 
-const { elements, selectedId, updateElement, updateStyle, commitHistory } = useElements()
-const { bgColor, posterSize, scale, manualScale, panOffset, isPanning, activeTool } = useCanvas()
+const { elements, selectedId } = useElements()
+const { 
+  posterSize, bgColor, scale, panOffset, isPanning,
+  backgroundType, gradientStyle, showGrid,
+  manualScale, activeTool
+} = useCanvas()
 
 const containerRef = ref<HTMLElement | null>(null)
 
-// Interaction State
-const isDragging = ref(false)
-const dragAction = ref<'move' | 'rotate' | 'resize' | null>(null)
-const resizeHandle = ref<string | null>(null)
-const dragStart = ref<{ x: number, y: number } | null>(null)
-const elementStart = ref<{ x: number, y: number, w: number, h: number, rotate: number } | null>(null)
-const panStart = ref<{ x: number, y: number }>({ x: 0, y: 0 })
-
-// Filter visible elements
-const visibleElements = computed(() => elements.value.filter(e => !e.hidden))
-
-// --- Scale Logic ---
 const updateAutoScale = () => {
-  if (!containerRef.value) return
-  const { clientWidth, clientHeight } = containerRef.value
-  const padding = 160 // Buffer for floating controls
-  const availableW = clientWidth - padding
-  const availableH = clientHeight - padding
-  
-  const scaleW = availableW / (posterSize.value.w || 500)
-  const scaleH = availableH / (posterSize.value.h || 700)
-  
-  scale.value = Math.min(scaleW, scaleH, 1) 
-}
-
-// --- Interaction Handlers ---
-const pinchStartDist = ref<number | null>(null)
-const pinchStartScale = ref<number>(1)
-
-const getDistance = (touches: TouchList) => {
-  return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY)
-}
-
-const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
-  if (window.TouchEvent && e instanceof TouchEvent && e.touches.length === 2) {
-      if (e.cancelable) e.preventDefault()
-      const dist = getDistance(e.touches)
-      if (pinchStartDist.value === null) {
-          pinchStartDist.value = dist
-          pinchStartScale.value = manualScale.value
-      } else {
-          const ratio = dist / pinchStartDist.value
-          manualScale.value = Math.min(Math.max(pinchStartScale.value * ratio, 0.5), 5)
-      }
-      return
-  } else {
-      pinchStartDist.value = null
-  }
-
-  const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX
-  const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY
-
-  if (isDragging.value && dragStart.value && selectedId.value && elementStart.value) {
-    if (e.cancelable) e.preventDefault()
-    
-    const el = elements.value.find(el => el.id === selectedId.value)
-    if (!el || el.locked) return
-
-    const dx = clientX - dragStart.value.x
-    const dy = clientY - dragStart.value.y
-    const totalScale = (scale.value || 1) * (manualScale.value || 1)
-    const scaledDx = dx / totalScale
-    const scaledDy = dy / totalScale
-
-    if (dragAction.value === 'move') {
-      updateElement(selectedId.value, {
-        x: elementStart.value.x + scaledDx,
-        y: elementStart.value.y + scaledDy
-      })
-    } else if (dragAction.value === 'rotate') {
-        const rect = document.querySelector(`[data-element-frame="true"]`)?.getBoundingClientRect()
-        if (rect) {
-          const centerX = rect.left + rect.width / 2
-          const centerY = rect.top + rect.height / 2
-          const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI)
-          updateStyle(selectedId.value, { rotate: Math.round(angle + 90) })
-        }
-    } else if (dragAction.value === 'resize') {
-       if (el.type === 'shape' || el.type === 'image') {
-          let newW = elementStart.value.w
-          let newH = elementStart.value.h
-          
-          if (resizeHandle.value?.includes('right')) newW = elementStart.value.w + scaledDx
-          if (resizeHandle.value?.includes('bottom')) newH = elementStart.value.h + scaledDy
-          if (resizeHandle.value?.includes('left')) {
-              newW = elementStart.value.w - scaledDx
-              updateElement(el.id, { x: elementStart.value.x + scaledDx })
-          }
-          if (resizeHandle.value?.includes('top')) {
-              newH = elementStart.value.h - scaledDy
-              updateElement(el.id, { y: elementStart.value.y + scaledDy })
-          }
-
-          updateStyle(selectedId.value, { 
-              width: Math.max(newW, 20), 
-              height: Math.max(newH, 20) 
-          })
-       }
-    }
-  } else if (isPanning.value) {
-    if (window.TouchEvent && e instanceof TouchEvent && e.touches.length > 1) return 
-    if (e.cancelable) e.preventDefault()
-
-    panOffset.value = {
-      x: clientX - panStart.value.x,
-      y: clientY - panStart.value.y
-    }
-  }
-}
-
-const handleGlobalUp = () => {
-  if (isDragging.value || isPanning.value) {
-      if (isDragging.value) commitHistory()
-      isDragging.value = false
-      dragStart.value = null
-      dragAction.value = null
-      resizeHandle.value = null
-      isPanning.value = false
-  }
-}
-
-const handleElementDown = (e: MouseEvent | TouchEvent, id: number) => {
-  if (activeTool.value === 'hand') return
-  
-  const el = elements.value.find(el => el.id === id)
-  if (!el || el.hidden) return
-
-  const target = e.target as HTMLElement
-  const action = target.getAttribute('data-action') as any || 'move'
-  const handle = target.getAttribute('data-handle')
-  
-  if(target.closest('[contenteditable="true"]')) return 
-  
-  e.stopPropagation()
-  selectedId.value = id
-  
-  if (el.locked) return // Allow selection of locked elements, but no dragging
-
-  isDragging.value = true
-  dragAction.value = action
-  resizeHandle.value = handle
-  
-  const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX
-  const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY
-
-  dragStart.value = { x: clientX, y: clientY }
-  
-  elementStart.value = { 
-    x: el.x, 
-    y: el.y, 
-    w: el.style.width || 0, 
-    h: el.style.height || 0,
-    rotate: el.style.rotate || 0
-  }
-}
-
-const handleCanvasDown = (e: MouseEvent | TouchEvent) => {
-   const target = e.target as HTMLElement
-   
-   if (activeTool.value === 'hand' || target === e.currentTarget || target.classList.contains('canvas-area-container')) {
-     if (activeTool.value === 'select') selectedId.value = null
-     
-     isPanning.value = true
-     const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX
-     const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY
-     
-     panStart.value = {
-        x: clientX - panOffset.value.x,
-        y: clientY - panOffset.value.y
-     }
-   }
+    if (!containerRef.value) return
+    const padding = 64
+    const availableW = containerRef.value.clientWidth - padding
+    const availableH = containerRef.value.clientHeight - padding
+    const scaleW = availableW / posterSize.value.w
+    const scaleH = availableH / posterSize.value.h
+    scale.value = Math.min(scaleW, scaleH, 1)
 }
 
 onMounted(() => {
-  window.addEventListener('resize', updateAutoScale)
-  window.addEventListener('mousemove', handleGlobalMove, { passive: false })
-  window.addEventListener('mouseup', handleGlobalUp)
-  window.addEventListener('touchmove', handleGlobalMove, { passive: false })
-  window.addEventListener('touchend', handleGlobalUp)
-  
-  window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && activeTool.value !== 'hand') {
-          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) return
-          activeTool.value = 'hand'
-      }
-      if (e.key === 'v') {
-          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) return
-          activeTool.value = 'select'
-      }
-      if (e.key === 'h') {
-          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) return
-          activeTool.value = 'hand'
-      }
-  })
-  window.addEventListener('keyup', (e) => {
-      if (e.code === 'Space' && activeTool.value === 'hand') {
-          activeTool.value = 'select'
-      }
-  })
-
-  nextTick(updateAutoScale)
+    updateAutoScale()
+    window.addEventListener('resize', updateAutoScale)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('resize', updateAutoScale)
-  window.removeEventListener('mousemove', handleGlobalMove)
-  window.removeEventListener('mouseup', handleGlobalUp)
-  window.removeEventListener('touchmove', handleGlobalMove)
-  window.removeEventListener('touchend', handleGlobalUp)
-})
+watch(posterSize, updateAutoScale, { deep: true })
 
-watch(() => posterSize.value, updateAutoScale, { deep: true })
+const handleCanvasClick = (e: MouseEvent | TouchEvent) => {
+    if (e.target === e.currentTarget) {
+        selectedId.value = null
+    }
+}
+
+// Global Zoom Controls Actions
+const zoomIn = () => manualScale.value = Math.min(manualScale.value + 0.1, 5)
+const zoomOut = () => manualScale.value = Math.max(manualScale.value - 0.1, 0.2)
+const resetZoom = () => { manualScale.value = 1; panOffset.value = { x: 0, y: 0 } }
+
+// --- Touch Gestures ---
+const lastTouchDistance = ref<number | null>(null)
+const lastTouchCenter = ref<{ x: number, y: number } | null>(null)
+
+const getDistance = (t1: Touch, t2: Touch) => {
+    const dx = t1.clientX - t2.clientX
+    const dy = t1.clientY - t2.clientY
+    return Math.sqrt(dx * dx + dy * dy)
+}
+
+const getCenter = (t1: Touch, t2: Touch) => {
+    return {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+    }
+}
+
+const handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+        lastTouchDistance.value = getDistance(e.touches[0], e.touches[1])
+        lastTouchCenter.value = getCenter(e.touches[0], e.touches[1])
+    } else {
+        handleCanvasClick(e)
+    }
+}
+
+const handleTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+        e.preventDefault() // Prevent page scroll (important) via CSS too if needed
+
+        // Pinch Zoom
+        const dist = getDistance(e.touches[0], e.touches[1])
+        if (lastTouchDistance.value) {
+            const zoomDelta = dist / lastTouchDistance.value
+            manualScale.value = Math.min(Math.max(manualScale.value * zoomDelta, 0.2), 5)
+        }
+        lastTouchDistance.value = dist
+
+        // Two-Finger Pan
+        const center = getCenter(e.touches[0], e.touches[1])
+        if (lastTouchCenter.value) {
+            const dx = center.x - lastTouchCenter.value.x
+            const dy = center.y - lastTouchCenter.value.y
+            panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
+        }
+        lastTouchCenter.value = center
+    }
+}
+
+const handleTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) {
+        lastTouchDistance.value = null
+        lastTouchCenter.value = null
+    }
+}
+
+// --- Trackpad Gestures ---
+const handleWheel = (e: WheelEvent) => {
+    e.preventDefault()
+
+    if (e.ctrlKey || e.metaKey) {
+        // Pinch / Zoom (Trackpads often send Ctrl+Wheel for pinch)
+        // Adjust sensitivity as needed
+        const zoomDelta = -e.deltaY * 0.01 
+        manualScale.value = Math.min(Math.max(manualScale.value + zoomDelta, 0.2), 5)
+    } else {
+        // Pan
+        panOffset.value = {
+            x: panOffset.value.x - e.deltaX,
+            y: panOffset.value.y - e.deltaY
+        }
+    }
+}
+
 </script>
 
 <template>
   <div 
-     ref="containerRef"
-     class="flex-1 flex items-center justify-center p-4 md:p-8 overflow-hidden relative touch-none canvas-area-container theme-transition"
-     :class="[
-       activeTool === 'hand' ? 'cursor-grab active:cursor-grabbing' : (isDragging ? 'cursor-grabbing' : 'cursor-default')
-     ]"
-     style="background-color: var(--bg-surface);"
-     @mousedown="handleCanvasDown"
-     @touchstart="handleCanvasDown"
+    ref="containerRef"
+    id="poster-canvas-container"
+    class="flex-1 bg-surface-lowest relative overflow-hidden flex items-center justify-center cursor-crosshair theme-transition"
+    @mousedown="handleCanvasClick"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
+    @wheel="handleWheel"
   >
-     <!-- Canvas Content -->
-     <div
-       class="relative transition-transform duration-75 ease-out shadow-2xl"
+    <!-- Background Grid / Texture -->
+    <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px]"></div>
+
+    <!-- Zoomable/Pannable Viewport -->
+    <div 
+       class="relative transition-transform duration-200 ease-out preserve-3d"
        :style="{
-          width: `${posterSize.w}px`,
-          height: `${posterSize.h}px`,
-          backgroundColor: bgColor,
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scale * manualScale})`,
-          opacity: 1
+          width: `${posterSize.w}px`,
+          height: `${posterSize.h}px`
        }"
-     >
-        <!-- Grid -->
-        <div class="absolute inset-0 pointer-events-none opacity-10"
-             :style="{ 
-               backgroundImage: `linear-gradient(${bgColor === '#121212' ? '#333' : '#ccc'} 1px, transparent 1px), linear-gradient(90deg, ${bgColor === '#121212' ? '#333' : '#ccc'} 1px, transparent 1px)`, 
-               backgroundSize: '20px 20px' 
-             }"
-        ></div>
+    >
+       <!-- The Poster Surface -->
+       <div 
+          id="poster-content"
+          class="w-full h-full shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-outline/5 relative overflow-hidden theme-transition"
+          :style="{ 
+            backgroundColor: backgroundType === 'solid' ? bgColor : undefined,
+            backgroundImage: backgroundType === 'gradient' ? gradientStyle : undefined,
+          }"
+       >
+          <!-- Grid Overlay -->
+          <div v-if="showGrid" class="absolute inset-0 pointer-events-none z-[1]" 
+               style="background-image: linear-gradient(#00000010 1px, transparent 1px), linear-gradient(90deg, #00000010 1px, transparent 1px); background-size: 50px 50px;">
+          </div>
+          <RenderElement 
+            v-for="element in elements" 
+            :key="element.id" 
+            :element="element" 
+          />
+       </div>
+    </div>
 
-         <!-- Elements -->
-         <RenderElement
-           v-for="el in visibleElements"
-           :key="el.id"
-           :element="el"
-           :is-selected="selectedId === el.id"
-           @mousedown="(e) => handleElementDown(e, el.id)"
-           @touchstart="(e) => handleElementDown(e, el.id)"
-           @update="updateElement"
-         />
+    <!-- Floating UI: Zoom & Tools -->
+    <div class="absolute bottom-8 right-8 flex flex-col gap-2 z-40">
+        <div class="bg-surface-high rounded-[28px] p-2 flex flex-col gap-1 shadow-lg border border-outline/10 backdrop-blur-md">
+            <md-icon-button @click="zoomIn"><ZoomIn :size="20" /></md-icon-button>
+            <div class="h-px bg-outline/10 mx-2"></div>
+            <md-icon-button @click="zoomOut"><ZoomOut :size="20" /></md-icon-button>
+            <div class="h-px bg-outline/10 mx-2"></div>
+            <md-icon-button @click="resetZoom"><Maximize :size="20" /></md-icon-button>
+        </div>
+        <div class="bg-primary-container text-on-primary-container rounded-[28px] p-2 flex flex-col gap-1 shadow-lg shadow-primary/10">
+            <md-icon-button @click="activeTool = 'select'" :selected="activeTool === 'select'"><MousePointer2 :size="20" /></md-icon-button>
+            <md-icon-button @click="activeTool = 'hand'" :selected="activeTool === 'hand'"><Hand :size="20" /></md-icon-button>
+        </div>
+    </div>
 
-         <!-- Empty State Placeholder -->
-         <div v-if="elements.length === 0" class="absolute inset-0 flex flex-col items-center justify-center p-12 text-center pointer-events-none">
-            <div class="w-24 h-24 mb-6 rounded-3xl bg-blue-500/5 border-2 border-dashed border-blue-500/20 flex items-center justify-center animate-pulse">
-               <Layers class="text-blue-500/30" :size="48" />
-            </div>
-            <h2 class="text-2xl font-bold mb-2" style="color: var(--fg-primary);">Your canvas is ready</h2>
-            <p class="max-w-[240px] text-sm leading-relaxed" style="color: var(--fg-secondary);">
-              Add text, shapes, or images from the left toolbar to start creating your masterpiece.
-            </p>
-         </div>
-     </div>
+    <!-- Scale Indicator -->
+    <div class="absolute bottom-8 left-8 bg-surface-high px-4 py-2 rounded-full border border-outline/10 shadow-sm backdrop-blur-md z-40">
+       <span class="label-medium text-on-surface-variant font-mono">{{ Math.round(scale * manualScale * 100) }}%</span>
+    </div>
 
-     <!-- Global Zoom Controls -->
-     <div class="absolute bottom-6 right-6 flex items-center gap-1 z-50 p-1 rounded-2xl backdrop-blur-md border shadow-2xl theme-transition" style="background-color: var(--bg-panel); border-color: var(--border-color);">
-        <md-icon-button @click.stop="manualScale = Math.max(manualScale - 0.1, 0.5)" title="Zoom Out">
-            <ZoomOut :size="18" />
-        </md-icon-button>
-        <div class="text-[11px] font-mono px-2 min-w-[50px] text-center" style="color: var(--fg-secondary);">{{ Math.round(scale * manualScale * 100) }}%</div>
-        <md-icon-button @click.stop="manualScale = Math.min(manualScale + 0.1, 5)" title="Zoom In">
-           <ZoomIn :size="18" />
-        </md-icon-button>
-        <div class="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
-        <md-icon-button @click.stop="manualScale = 1; panOffset = {x:0, y:0}" title="Reset View">
-            <RotateCcw :size="18" />
-        </md-icon-button>
-     </div>
   </div>
 </template>
 
 <style scoped>
-.canvas-area-container {
-  background-image: radial-gradient(circle, var(--border-color) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
+@reference "../../index.css";
+
+.preserve-3d { transform-style: preserve-3d; }
+.bg-surface-lowest { background-color: var(--md-sys-color-surface-container-lowest); }
+.bg-surface-high { background-color: var(--md-sys-color-surface-container-high); }
+.bg-primary-container { background-color: var(--md-sys-color-primary-container); }
+.text-on-primary-container { color: var(--md-sys-color-on-primary-container); }
 </style>

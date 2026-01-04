@@ -1,155 +1,280 @@
 @import "tailwindcss";
 
-/* Optional: Hide scrollbar utility */
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
+@theme {
+    --font-sans: "Inter", "Roboto", "Helvetica Neue", sans-serif;
+
+    /* Material 3 Reference Colors - Baseline Scheme */
+    --color-md-ref-primary: #0061a4;
+    --color-md-ref-secondary: #535f70;
+    --color-md-ref-tertiary: #6b5778;
+    --color-md-ref-error: #ba1a1a;
+
+    /* Material 3 Semantic Tokens */
+    --color-primary: var(--md-sys-color-primary, #0061a4);
+    --color-on-primary: var(--md-sys-color-on-primary, #ffffff);
+    --color-primary-container: var(--md-sys-color-primary-container, #d1e4ff);
+    --color-on-primary-container: var(--md-sys-color-on-primary-container, #001d36);
+
+    --color-secondary: var(--md-sys-color-secondary, #535f70);
+    --color-on-secondary: var(--md-sys-color-on-secondary, #ffffff);
+    --color-secondary-container: var(--md-sys-color-secondary-container, #d7e3f7);
+    --color-on-secondary-container: var(--md-sys-color-on-secondary-container, #101c2b);
+
+    --color-tertiary: var(--md-sys-color-tertiary, #6b5778);
+    --color-tertiary-container: var(--md-sys-color-tertiary-container, #f2daff);
+
+    --color-error: var(--md-sys-color-error, #ba1a1a);
+    --color-error-container: var(--md-sys-color-error-container, #ffdad6);
+    --color-on-error: var(--md-sys-color-on-error, #ffffff);
+
+    --color-surface: var(--md-sys-color-surface, #fdfcff);
+    --color-on-surface: var(--md-sys-color-on-surface, #1a1c1e);
+    --color-surface-variant: var(--md-sys-color-surface-variant, #dfe3eb);
+    --color-on-surface-variant: var(--md-sys-color-on-surface-variant, #43474e);
+
+    --color-outline: var(--md-sys-color-outline, #73777f);
+    --color-background: var(--md-sys-color-background, #fdfcff);
+
+    /* M3 Surface Containers */
+    --color-surface-lowest: var(--md-sys-color-surface-container-lowest, #ffffff);
+    --color-surface-low: var(--md-sys-color-surface-container-low, #f7f9ff);
+    --color-surface-mid: var(--md-sys-color-surface-container, #f1f4f9);
+    --color-surface-high: var(--md-sys-color-surface-container-high, #ebeef3);
+    --color-surface-highest: var(--md-sys-color-surface-container-highest, #e5e8ed);
+
+    /* Animations & Transitions */
+    --animate-in: animate-in 0.3s ease-out;
+    --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    --animate-spin: spin 1s linear infinite;
+
+    @keyframes animate-in {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
 }
 
-.hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* Custom Tailwind Utilities fallback for v4 */
+@utility slide-in-from-top-2 {
+    --tw-enter-translate-y: -0.5rem;
+    transform: translateY(var(--tw-enter-translate-y));
 }
 
-:root {
-    /* Transitions */
-    --transition-speed: 0.3s;
-    --transition-ease: ease-in-out;
-
-    /* Light Theme Defaults */
-    --bg-page: #f3f4f6;
-    /* gray-100 */
-    --bg-panel: #ffffff;
-    /* white */
-    --bg-surface: #f9fafb;
-    /* gray-50 */
-    --bg-input: #ffffff;
-    --fg-primary: #111827;
-    /* gray-900 */
-    --fg-secondary: #4b5563;
-    /* gray-600 */
-    --border-color: #e5e7eb;
-    /* gray-200 */
-
-    /* Material Web Light Matches */
-    --md-sys-color-primary: #2563eb;
-    /* blue-600 */
-    --md-sys-color-on-primary: #ffffff;
-    --md-sys-color-primary-container: #dbeafe;
-    /* blue-100 */
-    --md-sys-color-on-primary-container: #1e3a8a;
-    /* blue-900 */
-
-    --md-sys-color-secondary: #475569;
-    /* slate-600 */
-    --md-sys-color-on-secondary: #ffffff;
-    --md-sys-color-secondary-container: #e2e8f0;
-    /* slate-200 */
-    --md-sys-color-on-secondary-container: #1e293b;
-    /* slate-800 */
-
-    --md-sys-color-surface: #ffffff;
-    --md-sys-color-on-surface: #111827;
-    --md-sys-color-surface-variant: #f3f4f6;
-    --md-sys-color-on-surface-variant: #4b5563;
-
-    --md-sys-color-outline: #9ca3af;
-    --md-sys-color-outline-variant: #e5e7eb;
-
-    --md-ref-typeface-plain: 'Inter', system-ui, sans-serif;
-
-    /* Component Overrides Light */
-    --md-filled-text-field-container-color: #f3f4f6;
-    --md-filled-text-field-input-text-color: #111827;
-    --md-filled-text-field-label-text-color: #6b7280;
-    --md-filled-text-field-focus-label-text-color: #2563eb;
-    --md-filled-text-field-focus-active-indicator-color: #2563eb;
-
-    --md-outlined-select-container-color: #ffffff;
-    --md-outlined-select-text-color: #111827;
-    --md-outlined-select-label-text-color: #6b7280;
-    --md-outlined-select-focus-label-text-color: #2563eb;
-    --md-outlined-select-outline-color: #d1d5db;
-
-    /* Menu */
-    --md-menu-container-color: #ffffff;
-    --md-menu-item-label-text-color: #111827;
+@utility zoom-in {
+    --tw-enter-scale: 0.95;
+    transform: scale(var(--tw-enter-scale));
 }
 
-:root.dark {
-    /* Dark Theme Overrides */
-    --bg-page: #111827;
-    /* gray-900 */
-    --bg-panel: #1f2937;
-    /* gray-800 */
-    --bg-surface: #374151;
-    /* gray-700 */
-    --bg-input: #111827;
-    --fg-primary: #ffffff;
-    --fg-secondary: #9ca3af;
-    /* gray-400 */
-    --border-color: #374151;
-    /* gray-700 */
-
-    /* Material Web Dark Matches */
-    --md-sys-color-primary: #60a5fa;
-    /* blue-400 */
-    --md-sys-color-on-primary: #0f172a;
-    /* gray-900 */
-    --md-sys-color-primary-container: #1e3a8a;
-    /* blue-900 */
-    --md-sys-color-on-primary-container: #dbeafe;
-    /* blue-100 */
-
-    --md-sys-color-secondary: #94a3b8;
-    /* gray-400 */
-    --md-sys-color-on-secondary: #0f172a;
-    --md-sys-color-secondary-container: #334155;
-    /* gray-700 */
-    --md-sys-color-on-secondary-container: #f1f5f9;
-    /* gray-100 */
-
-    --md-sys-color-surface: #1f2937;
-    /* gray-800 */
-    --md-sys-color-on-surface: #e2e8f0;
-    /* gray-200 */
-    --md-sys-color-surface-variant: #374151;
-    /* gray-700 */
-    --md-sys-color-on-surface-variant: #9ca3af;
-    /* gray-400 */
-
-    --md-sys-color-outline: #4b5563;
-    /* gray-600 */
-    --md-sys-color-outline-variant: #374151;
-
-    /* Component Overrides Dark */
-    --md-filled-text-field-container-color: #111827;
-    --md-filled-text-field-input-text-color: #f3f4f6;
-    --md-filled-text-field-label-text-color: #9ca3af;
-    --md-filled-text-field-focus-label-text-color: #60a5fa;
-    --md-filled-text-field-focus-active-indicator-color: #60a5fa;
-
-    --md-outlined-select-container-color: #111827;
-    --md-outlined-select-text-color: #f3f4f6;
-    --md-outlined-select-label-text-color: #9ca3af;
-    --md-outlined-select-focus-label-text-color: #60a5fa;
-    --md-outlined-select-outline-color: #374151;
-
-    --md-menu-container-color: #1f2937;
-    --md-menu-item-label-text-color: #e2e8f0;
+@utility fade-in {
+    opacity: 0;
 }
 
-body {
-    margin: 0;
-    overscroll-behavior: none;
-    background-color: var(--bg-page);
-    color: var(--fg-primary);
-    transition: background-color var(--transition-speed) var(--transition-ease), color var(--transition-speed) var(--transition-ease);
+
+@layer base {
+    :root {
+        /* M3 System Color Tokens - Light mode (Default) */
+        --md-sys-color-primary: #0061a4;
+        --md-sys-color-on-primary: #ffffff;
+        --md-sys-color-primary-container: #d1e4ff;
+        --md-sys-color-on-primary-container: #001d36;
+        --md-sys-color-secondary: #535f70;
+        --md-sys-color-on-secondary: #ffffff;
+        --md-sys-color-secondary-container: #d7e3f7;
+        --md-sys-color-on-secondary-container: #101c2b;
+        --md-sys-color-tertiary: #6b5778;
+        --md-sys-color-on-tertiary: #ffffff;
+        --md-sys-color-tertiary-container: #f2daff;
+        --md-sys-color-on-tertiary-container: #251431;
+        --md-sys-color-error: #ba1a1a;
+        --md-sys-color-on-error: #ffffff;
+        --md-sys-color-error-container: #ffdad6;
+        --md-sys-color-on-error-container: #410002;
+        --md-sys-color-background: #fdfcff;
+        --md-sys-color-on-background: #1a1c1e;
+        --md-sys-color-surface: #fdfcff;
+        --md-sys-color-on-surface: #1a1c1e;
+        --md-sys-color-surface-variant: #dfe3eb;
+        --md-sys-color-on-surface-variant: #43474e;
+        --md-sys-color-outline: #73777f;
+        --md-sys-color-surface-container-lowest: #ffffff;
+        --md-sys-color-surface-container-low: #f7f9ff;
+        --md-sys-color-surface-container: #f1f4f9;
+        --md-sys-color-surface-container-high: #ebeef3;
+        --md-sys-color-surface-container-highest: #e5e8ed;
+
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: var(--md-sys-color-background);
+        color: var(--md-sys-color-on-background);
+    }
+
+    /* Dark mode - Only active if .dark class is added to html/body */
+    .dark {
+        --md-sys-color-primary: #9ecaff;
+        --md-sys-color-on-primary: #003258;
+        --md-sys-color-primary-container: #00497d;
+        --md-sys-color-on-primary-container: #d1e4ff;
+        --md-sys-color-secondary: #bbc7db;
+        --md-sys-color-on-secondary: #253140;
+        --md-sys-color-secondary-container: #3b4858;
+        --md-sys-color-on-secondary-container: #d7e3f7;
+        --md-sys-color-background: #1a1c1e;
+        --md-sys-color-on-background: #e2e2e6;
+        --md-sys-color-surface: #1a1c1e;
+        --md-sys-color-on-surface: #e2e2e6;
+        --md-sys-color-surface-variant: #43474e;
+        --md-sys-color-on-surface-variant: #c3c7cf;
+        --md-sys-color-outline: #8d9199;
+        --md-sys-color-surface-container-lowest: #0f1113;
+        --md-sys-color-surface-container-low: #1a1c1e;
+        --md-sys-color-surface-container: #202225;
+        --md-sys-color-surface-container-high: #2a2c2f;
+        --md-sys-color-surface-container-highest: #35373a;
+    }
+
+    body {
+        @apply m-0 p-0 overflow-hidden;
+    }
+
+    /* Suppress Firebase Emulator Warning */
+    .firebase-emulator-warning {
+        display: none !important;
+    }
 }
 
-/* Global Transition Utility class for components */
+/* Material Typography Classes */
+.display-large {
+    font-size: 57px;
+    line-height: 64px;
+    letter-spacing: -0.25px;
+    font-weight: 400;
+}
+
+.display-medium {
+    font-size: 45px;
+    line-height: 52px;
+    letter-spacing: 0px;
+    font-weight: 400;
+}
+
+.display-small {
+    font-size: 36px;
+    line-height: 44px;
+    letter-spacing: 0px;
+    font-weight: 400;
+}
+
+.headline-large {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: 0px;
+    font-weight: 400;
+}
+
+.headline-medium {
+    font-size: 28px;
+    line-height: 36px;
+    letter-spacing: 0px;
+    font-weight: 400;
+}
+
+.headline-small {
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: 0px;
+    font-weight: 400;
+}
+
+.title-large {
+    font-size: 22px;
+    line-height: 28px;
+    letter-spacing: 0px;
+    font-weight: 400;
+}
+
+.title-medium {
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: 0.15px;
+    font-weight: 500;
+}
+
+.title-small {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.1px;
+    font-weight: 500;
+}
+
+.label-large {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.1px;
+    font-weight: 500;
+}
+
+.label-medium {
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.label-small {
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.body-large {
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: 0.5px;
+    font-weight: 400;
+}
+
+.body-medium {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.25px;
+    font-weight: 400;
+}
+
+.body-small {
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.4px;
+    font-weight: 400;
+}
+
+/* Transitions */
 .theme-transition {
-    transition: background-color var(--transition-speed) var(--transition-ease),
-        border-color var(--transition-speed) var(--transition-ease),
-        color var(--transition-speed) var(--transition-ease),
-        box-shadow var(--transition-speed) var(--transition-ease);
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Custom Scrollbar M3 Style */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--md-sys-color-surface-variant);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--md-sys-color-outline);
 }

@@ -1,209 +1,194 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { CanvasElement, useElements } from '../../composables/useElements'
-import { Copy, MoreHorizontal, RotateCcw, Move, Trash2, X } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { useElements, type CanvasElement } from '../../composables/useElements'
+import { useTransform } from '../../composables/useTransform'
+import { useCanvas } from '../../composables/useCanvas'
+import { 
+  Copy, Trash2, RotateCcw, Move, X, Lock, Unlock, Settings2
+} from 'lucide-vue-next'
+import '@material/web/iconbutton/icon-button.js'
 
 const props = defineProps<{
-  element: CanvasElement
-  isSelected: boolean
+    element: CanvasElement
 }>()
 
-const emit = defineEmits<{
-  (e: 'update', id: number, updates: Partial<CanvasElement>): void
-}>()
+const { selectedId, updateElement, deleteElement, duplicateElement } = useElements()
+const { startTransform } = useTransform()
+const { activeTab, isToolbarOpen } = useCanvas()
 
-const { duplicateElement, deleteElement, selectedId } = useElements()
+const isSelected = computed(() => selectedId.value === props.element.id)
 
-const textRef = ref<HTMLElement | null>(null)
-const isMenuOpen = ref(false)
+const openProperties = () => {
+    activeTab.value = 'properties'
+    isToolbarOpen.value = true
+}
 
-const renderStyle = computed(() => {
-  const el = props.element
-  const style = el.style
-  const base: any = {
-    left: `${el.x}px`,
-    top: `${el.y}px`,
-    position: 'absolute',
-    zIndex: props.isSelected ? 100 : 10,
-    opacity: style.opacity ?? 1,
-    transform: `rotate(${style.rotate ?? 0}deg) scaleX(${style.flipX ? -1 : 1}) scaleY(${style.flipY ? -1 : 1})`,
-    cursor: 'move',
-    transition: 'outline 0.1s ease',
-    transformOrigin: 'center center'
-  }
 
-  if (el.type === 'shape' || el.type === 'image') {
-    base.width = `${style.width || 100}px`
-    base.height = `${style.height || 100}px`
-  }
+const elementStyle = computed(() => ({
+    width: props.element.style.width ? `${props.element.style.width}px` : 'auto',
+    height: props.element.style.height ? `${props.element.style.height}px` : 'auto',
+    transform: `translate(${props.element.x}px, ${props.element.y}px) rotate(${props.element.style.rotate || 0}deg)`,
+    opacity: props.element.style.opacity ?? 1,
+    zIndex: props.element.order || 0,
+    position: 'absolute' as const,
+    display: props.element.hidden ? 'none' : 'block'
+}))
 
-  if (el.type === 'image') {
-    const blur = style.blur ?? 0
-    const grayscale = (style.grayscale ?? 0) * 100
-    const brightness = (style.brightness ?? 1) * 100
-    const contrast = (style.contrast ?? 1) * 100
-    const sepia = (style.sepia ?? 0) * 100
-
-    base.filter = `blur(${blur}px) grayscale(${grayscale}%) brightness(${brightness}%) contrast(${contrast}%) sepia(${sepia}%)`
-    base.borderRadius = typeof style.borderRadius === 'number' ? `${style.borderRadius}px` : style.borderRadius || '0px'
-    
-    if (style.shadow && style.shadow.blur > 0) {
-      base.boxShadow = `${style.shadow.offsetX ?? 0}px ${style.shadow.offsetY ?? 0}px ${style.shadow.blur}px ${style.shadow.color ?? '#000000'}`
+const innerStyle = computed(() => {
+    const s = props.element.style
+    return {
+        fontSize: s.fontSize ? `${s.fontSize}px` : undefined,
+        fontFamily: s.fontFamily,
+        fontWeight: s.fontWeight,
+        fontStyle: s.fontStyle,
+        color: s.color,
+        textAlign: s.textAlign,
+        backgroundColor: s.backgroundColor,
+        borderRadius: typeof s.borderRadius === 'number' ? `${s.borderRadius}px` : s.borderRadius,
+        borderWidth: s.borderWidth ? `${s.borderWidth}px` : undefined,
+        borderColor: s.borderColor,
+        mixBlendMode: s.mixBlendMode as any,
+        transform: `scaleX(${s.flipX ? -1 : 1}) scaleY(${s.flipY ? -1 : 1})`,
+        letterSpacing: s.letterSpacing ? `${s.letterSpacing}px` : undefined,
+        lineHeight: s.lineHeight,
+        textDecoration: s.textDecoration,
+        textTransform: s.textTransform,
+        WebkitTextStrokeWidth: s.webkitTextStrokeWidth ? `${s.webkitTextStrokeWidth}px` : undefined,
+        WebkitTextStrokeColor: s.webkitTextStrokeColor,
+        [props.element.type === 'text' ? 'textShadow' : 'boxShadow']: s.shadow 
+            ? `${s.shadow.offsetX}px ${s.shadow.offsetY}px ${s.shadow.blur}px ${s.shadow.color}` 
+            : undefined,
+        filter: [
+            s.blur ? `blur(${s.blur}px)` : '',
+            s.brightness ? `brightness(${s.brightness}%)` : '',
+            s.contrast ? `contrast(${s.contrast}%)` : '',
+            s.grayscale ? `grayscale(${s.grayscale}%)` : '',
+            s.sepia ? `sepia(${s.sepia}%)` : '',
+            s.saturate ? `saturate(${s.saturate}%)` : '',
+            s.hueRotate ? `hue-rotate(${s.hueRotate}deg)` : '',
+            s.invert ? `invert(${s.invert}%)` : ''
+        ].filter(Boolean).join(' ')
     }
-    
-    base.overflow = 'hidden'
-  }
-
-  if (el.type === 'shape') {
-    base.backgroundColor = style.backgroundColor || '#3b82f6'
-
-    if (style.shapeType === 'circle') {
-      base.borderRadius = '50%'
-    } else if (style.shapeType === 'triangle') {
-      base.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)'
-      base.borderRadius = 0
-    } else if (style.shapeType === 'star') {
-      base.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)'
-      base.borderRadius = 0
-    } else if (style.shapeType === 'hexagon') {
-      base.clipPath = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
-      base.borderRadius = 0
-    } else {
-      base.borderRadius = typeof style.borderRadius === 'number' ? `${style.borderRadius}px` : style.borderRadius || '0px'
-    }
-
-    if ((!style.shapeType || style.shapeType === 'rectangle' || style.shapeType === 'circle') && style.borderWidth) {
-      base.border = `${style.borderWidth}px solid ${style.borderColor ?? '#000000'}`
-    }
-  }
-  
-  if(el.type === 'text') {
-      base.fontSize = `${style.fontSize || 24}px`
-      base.fontFamily = style.fontFamily || 'Inter, sans-serif'
-      base.fontWeight = style.fontWeight || 'normal'
-      base.color = style.color || '#000000'
-      base.textAlign = style.textAlign || 'left'
-      base.lineHeight = style.lineHeight || 1.2
-      base.letterSpacing = style.letterSpacing || '0px'
-      base.fontStyle = style.fontStyle || 'normal'
-      base.whiteSpace = 'pre-wrap'
-      base.minWidth = '50px'
-      base.padding = '8px'
-  }
-
-  return base
 })
 
-const onTextBlur = () => {
-  if (textRef.value) {
-    emit('update', props.element.id, { content: textRef.value.innerText })
-  }
+const handleSelect = (e: MouseEvent | TouchEvent) => {
+    if (props.element.locked) return
+    selectedId.value = props.element.id
+    startTransform(props.element.id, 'move', e)
 }
 
-watch(() => props.element.content, (newVal) => {
-  if (textRef.value && textRef.value.innerText !== newVal) {
-    textRef.value.innerText = newVal || ''
-  }
-})
-
-const handleDuplicate = (e: Event) => {
-    e.stopPropagation()
-    duplicateElement(props.element.id)
+const toggleLock = () => {
+    updateElement(props.element.id, { locked: !props.element.locked })
 }
 
-const handleDelete = (e: Event) => {
-    e.stopPropagation()
-    deleteElement(props.element.id)
-    isMenuOpen.value = false
-}
 </script>
 
 <template>
-  <div
-    :class="[
-      'absolute transform-gpu select-none',
-      isSelected ? 'ring-[3px] ring-[#8b5cf6] shadow-2xl' : 'hover:ring-2 hover:ring-blue-300'
-    ]"
-    :style="renderStyle"
-    data-element-frame="true"
+  <div 
+    class="element-container group"
+    :class="{ 'is-selected': isSelected, 'is-locked': element.locked }"
+    :style="elementStyle"
+    @mousedown.stop="handleSelect"
+    @touchstart.stop="handleSelect"
+    :data-element-id="element.id"
   >
-    <!-- Floating Top Bar (Pill) -->
-    <div v-if="isSelected" 
-         class="absolute -top-20 left-1/2 -translate-x-1/2 flex items-center bg-white border border-gray-100 shadow-2xl rounded-full px-3 py-2.5 gap-3 z-[110] animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto"
-         :style="{ transform: `translateX(-50%) rotate(${-(element.style.rotate || 0)}deg)` }"
+    <!-- The Element Content -->
+    <div 
+        class="w-full h-full pointer-events-none select-none overflow-visible"
+        :style="innerStyle"
     >
-       <button @click="handleDuplicate" class="p-2.5 hover:bg-gray-100 rounded-full transition-colors border border-gray-100 shadow-sm bg-white active:scale-90 flex items-center justify-center">
-          <Copy :size="24" class="text-gray-800" />
-       </button>
-       <div class="w-px h-6 bg-gray-200"></div>
-       <button @click="isMenuOpen = !isMenuOpen" class="p-2.5 hover:bg-gray-100 rounded-full transition-colors relative active:scale-90 flex items-center justify-center">
-          <MoreHorizontal :size="24" class="text-gray-800" />
-          
-          <!-- Popover Menu -->
-          <div v-if="isMenuOpen" class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl border border-gray-100 p-1.5 flex flex-col min-w-[140px] z-[120]">
-             <button @click="handleDelete" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">
-                <Trash2 :size="18" /> Delete
-             </button>
-             <button @click="selectedId = null; isMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
-                <X :size="18" /> Deselect
-             </button>
-          </div>
-       </button>
+        <template v-if="element.type === 'text'">
+            <div class="whitespace-pre-wrap outline-none">{{ element.content }}</div>
+        </template>
+        
+        <template v-else-if="element.type === 'image'">
+            <img :src="element.src" class="w-full h-full object-contain pointer-events-none" />
+        </template>
+        
+        <template v-else-if="element.type === 'shape'">
+            <div class="w-full h-full transition-all">
+                <svg v-if="element.style.shapeType === 'circle'" viewBox="0 0 100 100" class="w-full h-full fill-current">
+                    <circle cx="50" cy="50" r="48" />
+                </svg>
+                <svg v-else-if="element.style.shapeType === 'triangle'" viewBox="0 0 100 100" class="w-full h-full fill-current">
+                    <path d="M50 5 L95 95 L5 95 Z" />
+                </svg>
+                <div v-else class="w-full h-full bg-current"></div>
+            </div>
+        </template>
     </div>
 
-    <!-- Corner Handles (White Circular) -->
-    <template v-if="isSelected">
-      <div class="absolute -top-4 -left-4 w-8 h-8 bg-white border-2 border-gray-100 rounded-full shadow-2xl z-[110] hover:scale-125 transition-transform cursor-nwse-resize active:scale-95" data-action="resize" data-handle="top-left"></div>
-      <div class="absolute -top-4 -right-4 w-8 h-8 bg-white border-2 border-gray-100 rounded-full shadow-2xl z-[110] hover:scale-125 transition-transform cursor-nesw-resize active:scale-95" data-action="resize" data-handle="top-right"></div>
-      <div class="absolute -bottom-4 -left-4 w-8 h-8 bg-white border-2 border-gray-100 rounded-full shadow-2xl z-[110] hover:scale-125 transition-transform cursor-nesw-resize active:scale-95" data-action="resize" data-handle="bottom-left"></div>
-      <div class="absolute -bottom-4 -right-4 w-8 h-8 bg-white border-2 border-gray-100 rounded-full shadow-2xl z-[110] hover:scale-125 transition-transform cursor-nwse-resize active:scale-95" data-action="resize" data-handle="bottom-right"></div>
+    <!-- M3 Selection UI & Controls -->
+    <template v-if="isSelected && !element.locked">
+        <!-- Selection Border -->
+        <div class="absolute inset-[-4px] border-2 border-primary rounded-lg pointer-events-none shadow-[0_0_15px_rgba(var(--md-sys-color-primary-rgb),0.3)]"></div>
+        
+        <!-- Action Pill (Floating Top) -->
+        <div class="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-surface-high border border-outline/10 p-1.5 rounded-full shadow-xl z-[70] animate-in zoom-in-95 duration-200">
+            <button class="control-btn" @click.stop="openProperties" title="Edit Properties"><Settings2 :size="16" /></button>
+            <div class="w-px h-4 bg-outline/20 mx-1"></div>
+            <button class="control-btn" @click.stop="duplicateElement(element.id)" title="Duplicate"><Copy :size="16" /></button>
+            <div class="w-px h-4 bg-outline/20 mx-1"></div>
+            <button class="control-btn" @click.stop="toggleLock" title="Lock"><Unlock :size="16" /></button>
+            <button class="control-btn danger" @click.stop="deleteElement(element.id)" title="Delete"><Trash2 :size="16" /></button>
+            <div class="w-px h-4 bg-outline/20 mx-1"></div>
+            <button class="control-btn" @click.stop="selectedId = null" title="Deselect"><X :size="16" /></button>
+        </div>
+
+        <!-- Corner Resize Handles (M3 Style) -->
+        <div class="handle top-left" @mousedown.stop="startTransform(element.id, 'resize', $event, 'tl')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'tl')"></div>
+        <div class="handle top-right" @mousedown.stop="startTransform(element.id, 'resize', $event, 'tr')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'tr')"></div>
+        <div class="handle bottom-left" @mousedown.stop="startTransform(element.id, 'resize', $event, 'bl')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'bl')"></div>
+        <div class="handle bottom-right" @mousedown.stop="startTransform(element.id, 'resize', $event, 'br')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'br')"></div>
+
+        <!-- Float-Bottom Action Buttons -->
+        <div class="absolute -bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-[70]">
+            <div class="action-circle secondary" @mousedown.stop="startTransform(element.id, 'rotate', $event)" @touchstart.stop="startTransform(element.id, 'rotate', $event)" title="Rotate">
+                <RotateCcw :size="24" />
+            </div>
+            <div class="action-circle primary" @mousedown.stop="startTransform(element.id, 'move', $event)" @touchstart.stop="startTransform(element.id, 'move', $event)" title="Drag to Move">
+                <Move :size="28" />
+            </div>
+        </div>
     </template>
 
-    <!-- Bottom Action Buttons (Rotate and Move) -->
-    <div v-if="isSelected" 
-         class="absolute -bottom-24 left-0 right-0 flex justify-around items-center z-[110] pointer-events-auto"
-         :style="{ transform: `rotate(${-(element.style.rotate || 0)}deg)` }"
-    >
-       <button class="w-16 h-16 bg-white rounded-full shadow-2xl border border-gray-100 flex items-center justify-center group active:scale-90 transition-all cursor-pointer hover:shadow-blue-500/10" data-action="rotate">
-          <RotateCcw :size="28" class="text-gray-800 pointer-events-none group-hover:rotate-45 transition-transform" />
-       </button>
-       <button class="w-16 h-16 bg-white rounded-full shadow-2xl border border-gray-100 flex items-center justify-center group active:scale-90 transition-all cursor-move hover:shadow-blue-500/10" data-action="move">
-          <Move :size="28" class="text-gray-800 pointer-events-none" />
-       </button>
+    <!-- Locked Indicator -->
+    <div v-if="element.locked && isSelected" class="absolute inset-0 border-2 border-outline/20 rounded-lg flex items-center justify-center bg-black/5 pointer-events-none">
+        <Lock class="text-on-surface-variant/50" :size="32" />
     </div>
-
-    <!-- Text Content -->
-    <div
-      v-if="element.type === 'text'"
-      ref="textRef"
-      :contenteditable="isSelected"
-      @blur="onTextBlur"
-      class="outline-none h-full w-full min-h-[1.2em] relative"
-      :class="isSelected ? 'cursor-text' : 'cursor-move'"
-    >{{ element.content }}</div>
-
-    <!-- Image Content -->
-    <img
-      v-if="element.type === 'image'"
-      :src="element.src"
-      alt="uploaded"
-      class="w-full h-full object-cover pointer-events-none"
-      :style="{
-          objectPosition: `${element.style.crop?.x ?? 50}% ${element.style.crop?.y ?? 50}%`,
-          transform: `scale(${element.style.crop?.scale ?? 1})`
-      }"
-    />
-
-    <!-- Shape Content -->
-    <div v-if="element.type === 'shape'" class="w-full h-full pointer-events-none"></div>
 
   </div>
 </template>
 
 <style scoped>
-[contenteditable="true"]:empty:before {
-  content: attr(placeholder);
-  display: block;
-  opacity: 0.5;
+@reference "../../index.css";
+
+.element-container { cursor: pointer; transition: opacity 0.2s; }
+.element-container.is-selected { cursor: move; }
+.element-container.is-locked { cursor: not-allowed; }
+
+.control-btn {
+  @apply w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-highest transition-colors text-on-surface-variant;
 }
+.control-btn.danger:hover { @apply text-error bg-error/10; }
+
+.handle {
+  @apply absolute w-4 h-4 bg-white border-2 border-primary rounded-full z-40 cursor-nwse-resize shadow-md hover:scale-125 transition-transform pointer-events-auto;
+}
+.top-left { top: -8px; left: -8px; cursor: nwse-resize; }
+.top-right { top: -8px; right: -8px; cursor: nesw-resize; }
+.bottom-left { bottom: -8px; left: -8px; cursor: nesw-resize; }
+.bottom-right { bottom: -8px; right: -8px; cursor: nwse-resize; }
+
+.action-circle {
+  @apply w-16 h-16 rounded-full flex items-center justify-center shadow-2xl cursor-grab transition-transform active:scale-95 border-4 border-white dark:border-surface;
+}
+.action-circle.primary { @apply bg-primary text-on-primary; }
+.action-circle.secondary { @apply bg-secondary-container text-on-secondary-container; }
+
+.text-primary { color: var(--md-sys-color-primary); }
+.bg-primary { background-color: var(--md-sys-color-primary); }
+.border-primary { border-color: var(--md-sys-color-primary); }
+.text-error { color: var(--md-sys-color-error); }
+.bg-surface-high { background-color: var(--md-sys-color-surface-container-high); }
 </style>

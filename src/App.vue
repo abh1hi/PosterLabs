@@ -1,335 +1,471 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import html2canvas from 'html2canvas'
-import { useElements } from './composables/useElements'
+import { ref, onMounted } from 'vue'
+import { useAuth } from './composables/useAuth'
 import { useCanvas } from './composables/useCanvas'
-import { useTheme } from './composables/useTheme'
+import { useElements } from './composables/useElements'
+import { useMedia } from './composables/useMedia'
 import { useToasts } from './composables/useToasts'
-
+import { useKeyboard } from './composables/useKeyboard'
+import LoginView from './views/LoginView.vue'
 import Toolbar from './components/UI/Toolbar.vue'
-import PropertiesPanel from './components/UI/PropertiesPanel.vue'
 import CanvasArea from './components/Editor/CanvasArea.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
 
+
 import { 
-  Download, Menu, Share2, Sun, Moon, CheckCircle, Info, AlertCircle,
-  Undo2, Redo2, FilePlus, FolderOpen, Save as SaveIcon, File as FileIcon
+  LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save, MonitorDown,
+  Menu, Settings, LogOut, CheckCircle, Info, AlertCircle,
+  Undo2, Redo2, Layers, Download, User, Cloud, CloudOff, Folder
 } from 'lucide-vue-next'
 
-import '@material/web/menu/menu.js'
-import '@material/web/menu/menu-item.js'
+import '@material/web/iconbutton/icon-button.js'
 import '@material/web/button/filled-button.js'
 import '@material/web/button/text-button.js'
-import '@material/web/iconbutton/icon-button.js'
-import '@material/web/icon/icon.js'
+import '@material/web/menu/menu.js'
+import '@material/web/menu/menu-item.js'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
-const { 
-  elements, selectedId, updateElement, deleteElement, 
-  undo, redo, canUndo, canRedo, clearElements 
-} = useElements()
+const { currentUser, logout, isLoading: isAuthLoading } = useAuth()
+const { isMobilePropertiesOpen, isToolbarOpen, posterSize, bgColor, activeTab } = useCanvas()
+const { undo, redo, canUndo, canRedo, elements } = useElements()
+// const { syncOfflineUploads, lastSyncTime, isUploading } = useMedia() // Removed sync
+const { toasts, removeToast, showToast } = useToasts()
+import { useNetworkStatus } from './composables/useNetworkStatus'
+import { exportProject, importProject } from './utils/projectFile'
+import { exportCanvas } from './utils/exportManager'
 
-const { bgColor, posterSize, manualScale } = useCanvas()
-const { theme, toggleTheme } = useTheme()
-const { toasts, showToast, removeToast } = useToasts()
+// Initialize Keyboard Shortcuts
+useKeyboard()
 
 const isExportMenuOpen = ref(false)
-const isFileMenuOpen = ref(false)
-const isExporting = ref(false)
 
-// Keyboard Controls
-const handleKeydown = (e: KeyboardEvent) => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) return
-
-    // History shortcuts
-    if ((e.ctrlKey || e.metaKey)) {
-        if (e.key === 'z') {
-            e.preventDefault()
-            if (e.shiftKey) redo()
-            else undo()
-            return
-        }
-        if (e.key === 'y') {
-            e.preventDefault()
-            redo()
-            return
-        }
-    }
-
-    if (selectedId.value) {
-        const step = e.shiftKey ? 10 : 1
-        const el = elements.value.find(e => e.id === selectedId.value)
-        if (!el || el.locked) return
-
-        switch (e.key) {
-            case 'ArrowUp':
-                e.preventDefault()
-                updateElement(selectedId.value, { y: el.y - step })
-                break
-            case 'ArrowDown':
-                e.preventDefault()
-                updateElement(selectedId.value, { y: el.y + step })
-                break
-            case 'ArrowLeft':
-                e.preventDefault()
-                updateElement(selectedId.value, { x: el.x - step })
-                break
-            case 'ArrowRight':
-                e.preventDefault()
-                updateElement(selectedId.value, { x: el.x + step })
-                break
-            case 'Delete':
-            case 'Backspace':
-                deleteElement(selectedId.value)
-                showToast('Element deleted', 'info')
-                break
-            case 'Escape':
-                selectedId.value = null
-                break
-        }
-    }
-    
-    // Global Zoom
-    if ((e.ctrlKey || e.metaKey)) {
-        if (e.key === '=' || e.key === '+') {
-            e.preventDefault()
-            manualScale.value = Math.min(manualScale.value + 0.1, 5)
-        } else if (e.key === '-') {
-            e.preventDefault()
-            manualScale.value = Math.max(manualScale.value - 0.1, 0.5)
-        } else if (e.key === '0') {
-            e.preventDefault()
-            manualScale.value = 1
-        }
-    }
+const handleExport = () => {
+  const success = exportProject(elements.value, { w: posterSize.value.w, h: posterSize.value.h, bg: bgColor.value })
+  if (success) showToast('Project saved as .posterLabs', 'success')
+  else showToast('Failed to save project', 'error')
 }
 
-onMounted(() => window.addEventListener('keydown', handleKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
-
-const handleExport = async (format: 'png' | 'jpeg' | 'webp' | 'json') => {
-  if (format === 'json') {
-    const data = JSON.stringify({
-      version: '1.0',
-      posterSize: posterSize.value,
-      bgColor: bgColor.value,
-      elements: elements.value
-    }, null, 2)
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `posterlab-project.json`
-    link.click()
-    showToast('Project saved as JSON', 'success')
-    return
-  }
-
-  isExporting.value = true
-  const prevId = selectedId.value
-  selectedId.value = null
+const handleImageExport = async (format: 'png' | 'jpeg' | 'pdf' | 'webp') => {
   isExportMenuOpen.value = false
-  
-  showToast(`Preparing ${format.toUpperCase()} export...`, 'info', 2000)
-
-  setTimeout(async () => {
-    const canvasEl = document.querySelector('.relative.shadow-2xl') as HTMLElement
-    if (canvasEl) {
-       try {
-         const canvas = await html2canvas(canvasEl, {
-             scale: 3,
-             backgroundColor: null,
-             useCORS: true,
-             logging: false
-         })
-         const link = document.createElement('a')
-         link.download = `posterlab-export.${format}`
-         link.href = canvas.toDataURL(`image/${format}`, 0.95)
-         link.click()
-         showToast('Export successful', 'success')
-       } catch (err) {
-         showToast('Export failed', 'error')
-       }
-    }
-    isExporting.value = false
-    selectedId.value = prevId
-  }, 500)
-}
-
-const handleImport = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  const file = target.files?.[0]
-  if(!file) return
-
-  const reader = new FileReader()
-  reader.onload = (event) => {
-      try {
-          const data = JSON.parse(event.target?.result as string)
-          if(data.posterSize) posterSize.value = data.posterSize
-          if(data.bgColor) bgColor.value = data.bgColor
-          if(data.elements) elements.value = data.elements
-          showToast('Project loaded successfully', 'success')
-      } catch(err) {
-          showToast('Failed to load project', 'error')
-      }
+  showToast(`Generating ${format.toUpperCase()}...`, 'info')
+  try {
+    // We assume the canvas area has a specific ID or we need to wrap it.
+    // For now let's assume 'poster-canvas' is the ID of the main container in CanvasArea.
+    // I need to verify CanvasArea has this ID or add it.
+    await exportCanvas('poster-content', format, `poster-${Date.now()}`)
+    showToast('Export complete', 'success')
+  } catch (e) {
+    showToast('Export failed', 'error')
+    console.error(e)
   }
-  reader.readAsText(file)
 }
 
-const handleNewProject = () => {
-    if (elements.value.length > 0) {
-        if (confirm('Create new project? Current progress will be lost.')) {
-            clearElements()
-            showToast('New project created', 'success')
+const isUserMenuOpen = ref(false)
+const projectInputRef = ref<HTMLInputElement | null>(null)
+
+const handleImportFile = async (e: Event) => {
+    const target = e.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (file) {
+        showToast('Loading project...', 'info')
+        try {
+            const project = await importProject(file)
+            elements.value = project.elements
+            posterSize.value = { w: project.canvas.width, h: project.canvas.height }
+            bgColor.value = project.canvas.background
+            showToast('Project loaded successfully', 'success')
+            // Reset input
+            target.value = ''
+        } catch (err: any) {
+            showToast(err.message || 'Failed to load project', 'error')
         }
-    } else {
-        clearElements()
-        showToast('New project created', 'success')
     }
-    isFileMenuOpen.value = false
 }
+// activeTab is now from useCanvas
+const { status: networkStatus } = useNetworkStatus()
+
+// PWA Install Logic
+const deferredPrompt = ref<any>(null)
+const showInstallButton = ref(false)
+
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+if (isStandalone) {
+    showInstallButton.value = false
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  deferredPrompt.value = e
+  showInstallButton.value = true
+})
+
+const installApp = async () => {
+  if (!deferredPrompt.value) {
+      // Fallback or info
+      return
+  }
+  deferredPrompt.value.prompt()
+  const { outcome } = await deferredPrompt.value.userChoice
+  if (outcome === 'accepted') {
+    deferredPrompt.value = null
+    showInstallButton.value = false
+  }
+}
+
+const handleAppLogout = async () => {
+    await logout()
+}
+
+const triggerHaptic = async () => {
+  try {
+    await Haptics.impact({ style: ImpactStyle.Light })
+  } catch (e) {
+    // Ignore if not on native
+  }
+}
+
+const handleTabChange = (tab: string) => {
+  if (activeTab.value === tab && isToolbarOpen.value) {
+      isToolbarOpen.value = false
+  } else {
+      activeTab.value = tab
+      isToolbarOpen.value = true
+  }
+  triggerHaptic()
+}
+
+const toggleProperties = () => {
+  isMobilePropertiesOpen.value = !isMobilePropertiesOpen.value
+  if (isMobilePropertiesOpen.value) {
+    activeTab.value = 'properties'
+    isToolbarOpen.value = true
+    triggerHaptic()
+  }
+}
+
+onMounted(() => {
+    // Sync removed as per "remove auto sync completely" request
+})
+
+
 </script>
 
 <template>
-  <div class="flex flex-col h-screen font-sans overflow-hidden theme-transition" style="background-color: var(--bg-page); color: var(--fg-primary);">
-    <!-- Header -->
-    <header class="h-14 border-b flex items-center justify-between px-4 z-50 shrink-0 theme-transition" style="background-color: var(--bg-panel); border-color: var(--border-color);">
-      <div class="flex items-center gap-3">
-        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
-          <Menu class="text-white" :size="20" />
-        </div>
+  <div v-if="isAuthLoading" class="fixed inset-0 flex items-center justify-center bg-surface">
+     <div class="flex flex-col items-center gap-4">
+        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p class="label-large text-primary animate-pulse">Initializing PosterLab...</p>
+     </div>
+  </div>
+
+  <template v-else>
+    <LoginView v-if="!currentUser" />
+    
+    <div v-else class="flex h-screen bg-background theme-transition overflow-hidden">
+      
+      <!-- [Desktop] Navigation Rail -->
+      <nav class="hidden md:flex flex-col w-20 bg-surface-low border-r border-outline/10 z-50 py-4 shrink-0 items-center justify-between h-full">
+         <div class="flex flex-col items-center gap-4 w-full flex-1 overflow-hidden">
+            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/10 overflow-hidden shrink-0 border border-outline/10">
+               <img src="/pwa-192x192.png" alt="PosterLab" class="w-full h-full object-cover">
+            </div>
+            
+            <!-- Rail Buttons -->
+            <div class="flex flex-col gap-2 w-full px-2 overflow-y-auto no-scrollbar">
+               <button @click="handleTabChange('design')" class="rail-item" :class="{ active: activeTab === 'design' }">
+                  <LayoutDashboard :size="20" />
+                  <span class="rail-label">Design</span>
+               </button>
+               <button @click="handleTabChange('projects')" class="rail-item" :class="{ active: activeTab === 'projects' }">
+                  <Folder :size="20" />
+                  <span class="rail-label">Projects</span>
+               </button>
+               <button @click="handleTabChange('elements')" class="rail-item" :class="{ active: activeTab === 'elements' }">
+                  <Box :size="20" />
+                  <span class="rail-label">Elements</span>
+               </button>
+               <button @click="handleTabChange('text')" class="rail-item" :class="{ active: activeTab === 'text' }">
+                  <Type :size="20" />
+                  <span class="rail-label">Text</span>
+               </button>
+                <button @click="handleTabChange('layers')" class="rail-item" :class="{ active: activeTab === 'layers' }">
+                   <Layers :size="20" />
+                   <span class="rail-label">Layers</span>
+                </button>
+                <button @click="handleTabChange('properties')" class="rail-item" :class="{ active: activeTab === 'properties' }">
+                   <Settings :size="20" />
+                   <span class="rail-label">Props</span>
+                </button>
+                <div class="mt-auto w-full pt-4 border-t border-outline/10 shrink-0"></div>
+                <button @click="handleTabChange('profile')" class="rail-item shrink-0" :class="{ active: activeTab === 'profile' }">
+                   <User :size="20" />
+                   <span class="rail-label">Profile</span>
+                </button>
+            </div>
+         </div>
+
+         <div class="flex flex-col items-center gap-4">
+            <md-icon-button @click="isToolbarOpen = !isToolbarOpen" class="mb-2" :selected="!isToolbarOpen">
+               <Menu :size="20" />
+            </md-icon-button>
+            <md-icon-button id="user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen">
+               <img v-if="currentUser.photoURL" :src="currentUser.photoURL" class="w-8 h-8 rounded-full" />
+               <Menu v-else :size="20" />
+            </md-icon-button>
+            <md-menu anchor="user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false">
+                <md-menu-item @click="handleTabChange('profile')">
+                   <User slot="start" :size="18" />
+                   <div slot="headline">Profile & Settings</div>
+                </md-menu-item>
+                <md-menu-item @click="handleAppLogout">
+                   <LogOut slot="start" :size="18" />
+                   <div slot="headline">Sign Out</div>
+                </md-menu-item>
+            </md-menu>
+         </div>
+      </nav>
+
+      <!-- Main Editor Container -->
+      <div class="flex flex-col flex-1 relative overflow-hidden">
         
-        <div class="relative items-center hidden sm:flex">
-          <md-text-button id="file-anchor" @click="isFileMenuOpen = !isFileMenuOpen">
-            <FileIcon slot="icon" :size="18" />
-            File
-          </md-text-button>
-          <md-menu anchor="file-anchor" :open="isFileMenuOpen" @closed="isFileMenuOpen = false">
-             <md-menu-item @click="handleNewProject">
-                <FilePlus slot="start" :size="18" />
-                <div slot="headline">New Project</div>
-             </md-menu-item>
-             <md-menu-item @click.stop>
-                <FolderOpen slot="start" :size="18" />
-                <div slot="headline">
-                   <label class="cursor-pointer w-full h-full block">
-                        Open Project
-                        <input type="file" hidden accept=".json" @change="handleImport" />
-                   </label>
+        <!-- Redesigned Top App Bar (Google UI Inspired) -->
+        <header class="h-14 sm:h-16 flex items-center justify-between px-2 sm:px-4 bg-surface-low/95 backdrop-blur-md border-b border-outline/5 z-30 shrink-0 sticky top-0 transition-all duration-300">
+           <!-- Left: Brand & Poster Info -->
+           <div class="flex items-center gap-1 sm:gap-2 min-w-0">
+              <md-icon-button class="md:hidden" @click="toggleProperties">
+                 <Menu :size="20" />
+              </md-icon-button>
+              
+              <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                 <!-- Logo Container -->
+                 <div class="w-9 h-9 sm:w-11 sm:h-11 bg-primary-container/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 border border-primary/10">
+                    <img src="/pwa-192x192.png" alt="PosterLab" class="w-8 h-8 sm:w-9 sm:h-9 object-contain opacity-95">
+                 </div>
+
+                 <!-- Poster Title & Status -->
+                 <div class="flex flex-col min-w-0">
+                    <div class="flex items-center gap-1 group cursor-pointer">
+                       <h1 class="title-small sm:title-medium font-semibold text-on-surface truncate min-w-0" title="My Creative Poster">
+                          My Creative Poster
+                       </h1>
+                       <div class="opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block">
+                          <Palette :size="14" class="text-on-surface-variant" />
+                       </div>
+                    </div>
+
+                    <!-- Status indicators (Google Docs Style) -->
+                    <div class="flex items-center gap-2 sm:gap-3 px-1">
+                       <div v-if="!networkStatus.connected" class="flex items-center gap-1 text-error/80 label-small">
+                           <CloudOff :size="12" />
+                           <span class="hidden sm:inline">Offline</span>
+                       </div>
+                       <div v-else class="flex items-center gap-1 text-on-surface-variant/60 label-small">
+                           <Cloud :size="12" />
+                           <span class="hidden sm:inline">Saved to Local</span>
+                       </div>
+                       <div class="w-1 h-1 rounded-full bg-outline/20"></div>
+                       <span class="label-small text-on-surface-variant/40 italic">Draft</span>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Right: Actions & History -->
+           <div class="flex items-center gap-1 sm:gap-3 shrink-0">
+              <!-- History Controls Grouped (Hidden on mobile) -->
+              <div class="hidden md:flex items-center bg-surface-container-highest/20 rounded-full p-1 border border-outline/5">
+                 <md-icon-button @click="undo" :disabled="!canUndo" class="h-9 w-9">
+                    <Undo2 :size="18" />
+                 </md-icon-button>
+                 <div class="w-px h-5 bg-outline/10 mx-0.5"></div>
+                 <md-icon-button @click="redo" :disabled="!canRedo" class="h-9 w-9">
+                    <Redo2 :size="18" />
+                 </md-icon-button>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex items-center gap-1 sm:gap-2">
+                <input type="file" ref="projectInputRef" hidden accept=".posterLabs" @change="handleImportFile" />
+                <md-icon-button @click="projectInputRef?.click()" title="Open Project (.posterLabs)" class="bg-surface-high border border-outline/5 rounded-full">
+                    <Folder :size="20" />
+                </md-icon-button>
+
+                <md-filled-tonal-button class="h-9 sm:h-10 px-2 sm:px-4 rounded-full transition-all">
+                   <Share2 slot="icon" :size="18" />
+                   <span class="hidden sm:inline">Share</span>
+                </md-filled-tonal-button>
+
+                 <div class="relative">
+                    <md-filled-button id="export-menu-anchor" @click="isExportMenuOpen = !isExportMenuOpen" class="h-9 sm:h-10 px-2 sm:px-4 rounded-full shadow-sm">
+                       <Download slot="icon" :size="18" />
+                       <span class="hidden sm:inline">Export</span>
+                       <md-menu anchor="export-menu-anchor" :open="isExportMenuOpen" @closed="isExportMenuOpen = false" positioning="popover" class="mt-2 text-start">
+                          <md-menu-item @click="handleExport">
+                             <Save slot="start" :size="18" />
+                             <div slot="headline">Project (.posterLabs)</div>
+                             <div slot="supporting-text">Save for later editing</div>
+                          </md-menu-item>
+                          <div class="h-px bg-outline/5 my-1 mx-3"></div>
+                          <md-menu-item @click="handleImageExport('png')">
+                             <Image slot="start" :size="18" />
+                             <div slot="headline">PNG Image</div>
+                             <div slot="supporting-text">High quality image</div>
+                          </md-menu-item>
+                          <md-menu-item @click="handleImageExport('jpeg')">
+                             <Image slot="start" :size="18" />
+                             <div slot="headline">JPEG Image</div>
+                             <div slot="supporting-text">Web optimized</div>
+                          </md-menu-item>
+                          <md-menu-item @click="handleImageExport('webp')">
+                             <Zap slot="start" :size="18" />
+                             <div slot="headline">WEBP Image</div>
+                             <div slot="supporting-text">Modern format</div>
+                          </md-menu-item>
+                           <md-menu-item @click="handleImageExport('pdf')">
+                             <FileText slot="start" :size="18" />
+                             <div slot="headline">PDF Document</div>
+                             <div slot="supporting-text">Print ready</div>
+                          </md-menu-item>
+                       </md-menu>
+                    </md-filled-button>
+                 </div>
+
+                 <md-icon-button v-if="showInstallButton" @click="installApp" class="bg-secondary-container/30 text-secondary rounded-xl hover:bg-secondary-container/50 hidden sm:flex">
+                    <MonitorDown :size="20" />
+                 </md-icon-button>
+              </div>
+
+              <!-- Profile Avatar (Integrated) -->
+              <div class="ml-1 sm:ml-2">
+                 <md-icon-button id="header-user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen" class="w-8 h-8 sm:w-10 sm:h-10 p-0 overflow-hidden ring-1 ring-outline/10">
+                    <img v-if="currentUser.photoURL" :src="currentUser.photoURL" class="w-full h-full object-cover" />
+                    <User v-else :size="20" class="text-on-surface-variant" />
+                 </md-icon-button>
+                 <md-menu anchor="header-user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false" positioning="popover">
+                    <md-menu-item @click="handleTabChange('profile')">
+                       <User slot="start" :size="18" />
+                       <div slot="headline">Profile & Settings</div>
+                    </md-menu-item>
+                    <md-menu-item @click="handleAppLogout">
+                       <LogOut slot="start" :size="18" />
+                       <div slot="headline">Sign Out</div>
+                    </md-menu-item>
+                 </md-menu>
+              </div>
+           </div>
+        </header>
+
+        <!-- Editor Body -->
+        <div class="flex-1 flex overflow-hidden relative">
+            <!-- Mobile Backdrop -->
+            <div 
+              v-if="isToolbarOpen" 
+              class="md:hidden fixed inset-0 bg-black/40 z-[55] backdrop-blur-sm transition-opacity"
+              @click="isToolbarOpen = false"
+            ></div>
+
+            <!-- Side Toolbar (Full Drawer) -->
+            <Toolbar />
+            
+            <!-- Canvas Area -->
+            <CanvasArea />
+        </div>
+
+        <!-- [Mobile] Bottom Navigation -->
+        <!-- [Mobile] Bottom Navigation -->
+        <nav class="md:hidden h-20 bg-surface-container flex items-center overflow-x-auto no-scrollbar gap-2 px-4 shrink-0 z-50">
+            <button @click="handleTabChange('design')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'design' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'design' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <LayoutDashboard :size="20" />
+               </div>
+               <span class="label-small">Design</span>
+            </button>
+            <button @click="handleTabChange('projects')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'projects' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'projects' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <Folder :size="20" />
+               </div>
+               <span class="label-small">Projects</span>
+            </button>
+            <button @click="handleTabChange('elements')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'elements' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'elements' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <Box :size="20" />
+               </div>
+               <span class="label-small">Elements</span>
+            </button>
+            <button @click="handleTabChange('text')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'text' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'text' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <Type :size="20" />
+               </div>
+               <span class="label-small">Text</span>
+            </button>
+             <button @click="handleTabChange('layers')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'layers' ? 'text-primary' : 'text-on-surface-variant'">
+                <div :class="activeTab === 'layers' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                   <Layers :size="20" />
                 </div>
-             </md-menu-item>
-             <md-menu-item @click="handleExport('json')">
-                <SaveIcon slot="start" :size="18" />
-                <div slot="headline">Save Project</div>
-             </md-menu-item>
-          </md-menu>
-        </div>
+                <span class="label-small">Layers</span>
+             </button>
+            <button @click="handleTabChange('properties')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'properties' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'properties' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <Settings :size="20" />
+               </div>
+               <span class="label-small">Props</span>
+            </button>
+            <button @click="handleTabChange('profile')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'profile' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'profile' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <User :size="20" />
+               </div>
+               <span class="label-small">Profile</span>
+            </button>
+        </nav>
 
-        <div class="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block"></div>
 
-        <!-- History -->
-        <div class="flex items-center gap-0.5">
-           <md-icon-button @click="undo" :disabled="!canUndo" title="Undo (Ctrl+Z)">
-              <Undo2 :size="20" />
-           </md-icon-button>
-           <md-icon-button @click="redo" :disabled="!canRedo" title="Redo (Ctrl+Shift+Z)">
-              <Redo2 :size="20" />
-           </md-icon-button>
-        </div>
       </div>
 
-      <div class="absolute left-1/2 -translate-x-1/2 hidden md:block">
-         <h1 class="font-bold text-lg tracking-tight">Poster<span class="text-blue-500">Lab</span> <span class="text-[10px] font-medium opacity-50">PRO</span></h1>
-      </div>
+    </div>
 
-      <div class="flex items-center gap-2">
-        <md-icon-button @click="toggleTheme" title="Toggle Theme">
-            <Sun v-if="theme === 'light'" :size="20" />
-            <Moon v-else :size="20" />
-        </md-icon-button>
-
-        <div class="relative flex items-center">
-          <md-filled-button id="export-anchor" @click="isExportMenuOpen = !isExportMenuOpen">
-             <Download slot="icon" :size="18" />
-             <span class="hidden sm:inline">Export</span>
-          </md-filled-button>
-          
-          <md-menu anchor="export-anchor" :open="isExportMenuOpen" @closed="isExportMenuOpen = false" class="z-50">
-            <md-menu-item @click="handleExport('png')">
-                <div slot="headline">Export as PNG</div>
-            </md-menu-item>
-            <md-menu-item @click="handleExport('jpeg')">
-                <div slot="headline">Export as JPEG</div>
-            </md-menu-item>
-            <md-menu-item @click="handleExport('webp')">
-                <div slot="headline">Export as WEBP</div>
-            </md-menu-item>
-            <md-menu-item @click="handleExport('json')">
-                <div slot="headline">Save Project (JSON)</div>
-            </md-menu-item>
-            <md-menu-item @click.stop>
-                <div slot="headline">
-                   <label class="cursor-pointer w-full h-full block">
-                        Load Project (JSON)
-                        <input type="file" hidden accept=".json" @change="handleImport" />
-                   </label>
-                </div>
-            </md-menu-item>
-          </md-menu>
-        </div>
-        
-        <md-icon-button @click="showToast('Link copied to clipboard', 'success')">
-           <Share2 :size="20" />
-        </md-icon-button>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-       <Toolbar />
-       <PropertiesPanel />
-       <CanvasArea />
-    </main>
-
-    <!-- Toast Notifications -->
-    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4">
-       <div v-for="t in toasts" :key="t.id" 
-            class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-2 duration-300 border backdrop-blur-md"
-            :style="{ 
-                backgroundColor: 'var(--bg-panel)', 
-                borderColor: 'var(--border-color)',
-                color: 'var(--fg-primary)'
-            }"
+    <!-- Toast Overlay -->
+    <div class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4">
+        <div v-for="t in toasts" :key="t.id" 
+            class="pointer-events-auto flex items-center gap-3 px-6 py-4 rounded-full shadow-lg bg-surface-highest border border-outline/10 text-on-surface"
         >
-          <CheckCircle v-if="t.type === 'success'" class="text-green-500" :size="20" />
-          <AlertCircle v-else-if="t.type === 'error'" class="text-red-500" :size="20" />
-          <Info v-else class="text-blue-500" :size="20" />
-          <span class="text-sm font-semibold flex-1">{{ t.message }}</span>
-          <button @click="removeToast(t.id)" class="ml-2 p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition">✕</button>
+          <CheckCircle v-if="t.type === 'success'" class="text-primary" :size="20" />
+          <AlertCircle v-else-if="t.type === 'error'" class="text-error" :size="20" />
+          <Info v-else class="text-secondary" :size="20" />
+          <span class="label-large flex-1">{{ t.message }}</span>
+          <button @click="removeToast(t.id)" class="ml-2 opacity-50 hover:opacity-100 transition">✕</button>
        </div>
     </div>
 
     <ReloadPrompt />
-  </div>
+  </template>
 </template>
 
 <style>
-/* Global styling for Material Web components */
-md-filled-text-field, md-outlined-select, md-slider, md-icon-button, md-filled-button, md-filled-tonal-button, md-text-button {
-    transition: all var(--transition-speed) var(--transition-ease) !important;
-}
+@reference "./index.css";
 
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+.bg-background { background-color: var(--md-sys-color-background); }
+.bg-surface { background-color: var(--md-sys-color-surface); }
+.bg-surface-container { background-color: var(--md-sys-color-surface-container); }
+.bg-surface-low { background-color: var(--md-sys-color-surface-container-low); }
+.bg-surface-high { background-color: var(--md-sys-color-surface-container-high); }
+.bg-surface-highest { background-color: var(--md-sys-color-surface-container-highest); }
+.text-primary { color: var(--md-sys-color-primary); }
+.text-on-primary { color: var(--md-sys-color-on-primary); }
+.bg-primary { background-color: var(--md-sys-color-primary); }
+.bg-primary-container { background-color: var(--md-sys-color-primary-container); }
+.text-error { color: var(--md-sys-color-error); }
+
+.rail-item {
+  @apply flex flex-col items-center gap-1 w-full py-4 transition-all duration-200 text-on-surface-variant hover:text-primary relative;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+.rail-item.active {
+  @apply text-primary;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 10px;
+.rail-item.active::after {
+  content: '';
+  @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--fg-secondary);
+.rail-label {
+  @apply text-[10px] font-bold uppercase tracking-wider;
 }
 </style>

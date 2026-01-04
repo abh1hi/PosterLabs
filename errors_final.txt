@@ -1,0 +1,8 @@
+﻿src/App.vue(2,15): error TS6133: 'computed' is declared but its value is never read.
+src/App.vue(33,7): error TS6133: 'handleExport' is declared but its value is never read.
+src/App.vue(60,7): error TS6133: 'handleImport' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(2,20): error TS6133: 'ref' is declared but its value is never read.
+src/components/Editor/RenderElement.vue(44,23): error TS6133: 'e' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(7,24): error TS6133: 'Lock' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(7,30): error TS6133: 'Unlock' is declared but its value is never read.
+src/components/UI/PropertiesPanel.vue(11,1): error TS6192: All imports in import declaration are unused.
