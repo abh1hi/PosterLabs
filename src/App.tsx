@@ -2,43 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 
 import {
-  Type,
-  Image as ImageIcon,
-  Square,
-  Circle,
-  Triangle,
-  Hexagon,
-  Star,
-  Download,
-  Trash2,
-  Move,
-  Layers,
-  Palette,
-  Type as TypeIcon,
-  Plus,
-  Minus,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Bold,
-  Italic,
-  Save,
-  X,
-  Search,
-  ChevronDown,
-  RotateCw,
-  Sun,
-  Droplet,
-  FileImage,
-  FileText,
-  FileJson,
-  Printer,
-  Upload,
-  Maximize,
-  Minimize,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw
+  Type, Move, Sun, Droplet, Layers, HelpCircle,
+  Trash2, Download, Image as ImageIcon, Sparkles,
+  Palette, Grid, Layout, Minus, Plus, ChevronDown,
+  Share2, Save, Printer, Search, Bold, Italic,
+  AlignLeft, AlignCenter, AlignRight, X, Menu,
+  Maximize, Minimize, ZoomIn, ZoomOut, RotateCcw,
+  Crop, FlipHorizontal, FlipVertical, Box, Square, Frame,
+  Circle, Triangle, Hexagon, Star, FileImage, FileText, FileJson, Upload
 } from 'lucide-react';
 
 const DEFAULT_FONTS = [
@@ -381,6 +352,10 @@ export default function PosterLab() {
             sepia: 0,
             borderWidth: 0,
             borderColor: '#000000',
+            crop: { x: 50, y: 50, scale: 1 }, // Default crop values
+            flipX: false, // Default flip values
+            flipY: false, // Default flip values
+            shadow: { blur: 0, color: '#000000', offsetX: 0, offsetY: 0 }, // Default shadow values
           }
         };
         setElements([...elements, newEl]);
@@ -511,6 +486,14 @@ export default function PosterLab() {
         base.border = `${el.style.borderWidth}px solid ${el.style.borderColor ?? '#000000'}`;
       }
       base.borderRadius = el.style.borderRadius;
+
+      // Box Shadow
+      if (el.style.shadow && el.style.shadow.blur > 0) {
+        base.boxShadow = `${el.style.shadow.offsetX ?? 0}px ${el.style.shadow.offsetY ?? 0}px ${el.style.shadow.blur}px ${el.style.shadow.color ?? '#000000'}`;
+      }
+
+      // Ensure cropping works by clipping overflow
+      base.overflow = 'hidden';
     }
 
     if (el.type === 'shape') {
@@ -858,8 +841,10 @@ export default function PosterLab() {
                     alt="uploaded"
                     className="w-full h-full object-cover pointer-events-none"
                     style={{
-                      borderRadius: el.style.borderRadius,
-                      mixBlendMode: el.style.mixBlendMode
+                      borderRadius: el.style.borderRadius, // Applied to container, but consistent here for safety if no clip
+                      mixBlendMode: el.style.mixBlendMode,
+                      objectPosition: `${el.style.crop?.x ?? 50}% ${el.style.crop?.y ?? 50}%`,
+                      transform: `scale(${el.style.crop?.scale ?? 1}) scaleX(${el.style.flipX ? -1 : 1}) scaleY(${el.style.flipY ? -1 : 1})`,
                     }}
                   />
                 )}
@@ -1076,350 +1061,438 @@ export default function PosterLab() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Filters */}
-                  <div className="space-y-3">
-                    <label className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-2">
-                      <Sun size={12} /> Filters
-                    </label>
-                    <div className="space-y-3 pl-2 border-l-2 border-gray-700">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400">Grayscale</label>
-                          <input type="range" min="0" max="100" value={selectedElement.style.grayscale ?? 0} onChange={(e) => updateStyle(selectedElement.id, { grayscale: parseInt(e.target.value) })} className="w-full accent-gray-500 h-1 bg-gray-700 rounded cursor-pointer" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400">Sepia</label>
-                          <input type="range" min="0" max="100" value={selectedElement.style.sepia ?? 0} onChange={(e) => updateStyle(selectedElement.id, { sepia: parseInt(e.target.value) })} className="w-full accent-amber-600 h-1 bg-gray-700 rounded cursor-pointer" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400">Brightness</label>
-                          <input type="range" min="0" max="200" value={selectedElement.style.brightness ?? 100} onChange={(e) => updateStyle(selectedElement.id, { brightness: parseInt(e.target.value) })} className="w-full accent-yellow-500 h-1 bg-gray-700 rounded cursor-pointer" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400">Contrast</label>
-                          <input type="range" min="0" max="200" value={selectedElement.style.contrast ?? 100} onChange={(e) => updateStyle(selectedElement.id, { contrast: parseInt(e.target.value) })} className="w-full accent-gray-300 h-1 bg-gray-700 rounded cursor-pointer" />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-gray-400 flex justify-between">Blur <span>{selectedElement.style.blur ?? 0}px</span></label>
-                        <input type="range" min="0" max="20" value={selectedElement.style.blur ?? 0} onChange={(e) => updateStyle(selectedElement.id, { blur: parseInt(e.target.value) })} className="w-full accent-blue-500 h-1.5 bg-gray-700 rounded-lg cursor-pointer" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Effects & Border */}
-                  <div className="space-y-3">
-                    <label className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-2">
-                      <Droplet size={12} /> Effects
-                    </label>
-                    <div className="space-y-3 pl-2 border-l-2 border-gray-700">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-gray-400">Mix Blend Mode</label>
-                        <select
-                          className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-xs text-gray-300 outline-none focus:border-blue-500"
-                          value={selectedElement.style.mixBlendMode}
-                          onChange={(e) => updateStyle(selectedElement.id, { mixBlendMode: e.target.value })}
-                        >
-                          {blendModes.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400">Radius</label>
-                          <input
-                            type="number"
-                            value={parseInt(selectedElement.style.borderRadius) || 0}
-                            onChange={(e) => updateStyle(selectedElement.id, { borderRadius: parseInt(e.target.value) })}
-                            className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400">Border Width</label>
-                          <input
-                            type="number"
-                            value={parseInt(selectedElement.style.borderWidth) || 0}
-                            onChange={(e) => updateStyle(selectedElement.id, { borderWidth: parseInt(e.target.value) })}
-                            className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-gray-400">Border Color</label>
-                        <div className="flex gap-2">
-                          <input type="color" value={selectedElement.style.borderColor || '#000000'} onChange={(e) => updateStyle(selectedElement.id, { borderColor: e.target.value })} className="w-8 h-6 rounded cursor-pointer" />
-                          <input type="text" value={selectedElement.style.borderColor || '#000000'} onChange={(e) => updateStyle(selectedElement.id, { borderColor: e.target.value })} className="flex-1 bg-gray-900 border border-gray-700 rounded p-1 text-xs uppercase" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Shape specific controls */}
-              {selectedElement.type === 'shape' && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs text-gray-500 font-semibold uppercase">Dimensions</label>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-8">Type</span>
-                        <select
-                          className="flex-1 bg-gray-900 border border-gray-700 rounded p-1.5 text-xs text-gray-300 outline-none"
-                          value={selectedElement.style.shapeType || 'rectangle'}
-                          onChange={(e) => updateStyle(selectedElement.id, { shapeType: e.target.value })}
-                        >
-                          {shapeTypes.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-8">W</span>
-                        <input type="range" min="10" max="500" value={parseInt(selectedElement.style.width)} onChange={(e) => updateStyle(selectedElement.id, { width: parseInt(e.target.value) })} className="flex-1 accent-blue-500" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-8">H</span>
-                        <input type="range" min="10" max="500" value={parseInt(selectedElement.style.height)} onChange={(e) => updateStyle(selectedElement.id, { height: parseInt(e.target.value) })} className="flex-1 accent-blue-500" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-8">Rot</span>
-                        <input type="range" min="0" max="360" value={parseInt(selectedElement.style.rotate || 0)} onChange={(e) => updateStyle(selectedElement.id, { rotate: parseInt(e.target.value) })} className="flex-1 accent-blue-500" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-8">Op</span>
-                        <input type="range" min="0" max="1" step="0.1" value={selectedElement.style.opacity || 1} onChange={(e) => updateStyle(selectedElement.id, { opacity: parseFloat(e.target.value) })} className="flex-1 accent-blue-500" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs text-gray-500 font-semibold uppercase">Appearance</label>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-400">Fill Color</span>
-                        <input type="color" value={selectedElement.style.backgroundColor} onChange={(e) => updateStyle(selectedElement.id, { backgroundColor: e.target.value })} className="w-8 h-6 rounded cursor-pointer" />
-                      </div>
-
-                      {/* Show Border controls only for Rect/Circle */}
-                      {(selectedElement.style.shapeType === 'rectangle' || selectedElement.style.shapeType === 'circle' || !selectedElement.style.shapeType) && (
-                        <div className="space-y-2 pt-2 border-t border-gray-700">
-                          <div className="space-y-1">
-                            <label className="text-[10px] text-gray-400">Border Width</label>
-                            <input
-                              type="number"
-                              value={parseInt(selectedElement.style.borderWidth) || 0}
-                              onChange={(e) => updateStyle(selectedElement.id, { borderWidth: parseInt(e.target.value) })}
-                              className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs"
-                            />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-gray-400">Border Color</span>
-                            <input type="color" value={selectedElement.style.borderColor || '#000000'} onChange={(e) => updateStyle(selectedElement.id, { borderColor: e.target.value })} className="w-8 h-6 rounded cursor-pointer" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] text-gray-400">Corner Radius</label>
-                            <input
-                              type="number"
-                              disabled={selectedElement.style.shapeType === 'circle'}
-                              value={parseInt(selectedElement.style.borderRadius) || 0}
-                              onChange={(e) => updateStyle(selectedElement.id, { borderRadius: parseInt(e.target.value) })}
-                              className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs disabled:opacity-50"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          ) : (
-            <div className="p-6 space-y-6 pb-20 md:pb-6">
-              <div className="text-center py-8">
-                <Layers className="mx-auto text-gray-600 mb-2" size={32} />
-                <p className="text-gray-500 text-sm">Select an element to edit</p>
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-gray-700">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Canvas Settings</h3>
-
-                <div className="space-y-2">
-                  <label className="text-xs text-gray-500 font-semibold uppercase">Dimensions</label>
-                  <div className="flex flex-col gap-2">
-                    <select
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-gray-300 outline-none focus:border-blue-500"
-                      onChange={(e) => {
-                        if (e.target.value === 'custom') return;
-                        const size = posterSizes.find(s => s.name === e.target.value);
-                        if (size) {
-                          const isLandscape = posterSize.w > posterSize.h;
-                          const newW = isLandscape ? Math.max(size.w, size.h) : Math.min(size.w, size.h);
-                          const newH = isLandscape ? Math.min(size.w, size.h) : Math.max(size.w, size.h);
-                          setPosterSize({ w: newW, h: newH });
-                        }
-                      }}
-                      value={posterSizes.find(s =>
-                        (s.w === posterSize.w && s.h === posterSize.h) ||
-                        (s.w === posterSize.h && s.h === posterSize.w)
-                      )?.name || 'custom'}
-                    >
-                      {posterSizes.map(s => (
-                        <option key={s.name} value={s.name}>{s.name}</option>
-                      ))}
-                      <option value="custom">Custom Size</option>
-                    </select>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
-                        <span className="text-[10px] text-gray-500 font-bold">W</span>
-                        <input
-                          type="number"
-                          value={posterSize.w}
-                          onChange={(e) => setPosterSize({ ...posterSize, w: parseInt(e.target.value) || 0 })}
-                          className="w-full bg-transparent text-sm outline-none text-gray-300"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
-                        <span className="text-[10px] text-gray-500 font-bold">H</span>
-                        <input
-                          type="number"
-                          value={posterSize.h}
-                          onChange={(e) => setPosterSize({ ...posterSize, h: parseInt(e.target.value) || 0 })}
-                          className="w-full bg-transparent text-sm outline-none text-gray-300"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex bg-gray-900 border border-gray-700 rounded-lg p-1">
-                      <button
-                        className={`flex-1 text-xs py-1.5 rounded-md transition flex items-center justify-center gap-2 ${posterSize.h >= posterSize.w ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                        onClick={() => setOrientation('portrait')}
-                      >
-                        <div className="w-2 h-3 border border-current rounded-[1px]"></div> Portrait
-                      </button>
-                      <button
-                        className={`flex-1 text-xs py-1.5 rounded-md transition flex items-center justify-center gap-2 ${posterSize.w > posterSize.h ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                        onClick={() => setOrientation('landscape')}
-                      >
-                        <div className="w-3 h-2 border border-current rounded-[1px]"></div> Landscape
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Custom Theme Creator */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-gray-500 font-semibold uppercase">My Themes</label>
+                  {/* Crop & Flip */}
+              <div className="space-y-3">
+                <label className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-2">
+                  <Crop size={12} /> Crop & Flip
+                </label>
+                <div className="space-y-3 pl-2 border-l-2 border-gray-700">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => setIsCreatorOpen(!isCreatorOpen)}
-                      className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                      onClick={() => updateStyle(selectedElement.id, { flipX: !selectedElement.style.flipX })}
+                      className={`flex items-center justify-center gap-2 p-2 rounded text-xs border ${selectedElement.style.flipX ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200'}`}
                     >
-                      <Plus size={12} /> New
+                      <FlipHorizontal size={14} /> Flip H
+                    </button>
+                    <button
+                      onClick={() => updateStyle(selectedElement.id, { flipY: !selectedElement.style.flipY })}
+                      className={`flex items-center justify-center gap-2 p-2 rounded text-xs border ${selectedElement.style.flipY ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200'}`}
+                    >
+                      <FlipVertical size={14} /> Flip V
                     </button>
                   </div>
 
-                  {isCreatorOpen && (
-                    <div className="bg-gray-700/50 p-3 rounded-lg space-y-3 border border-gray-600 animate-in fade-in slide-in-from-top-2">
-                      <div>
-                        <label className="text-[10px] text-gray-400 uppercase mb-1 block">Theme Name</label>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-gray-400 flex justify-between">Zoom (Crop) <span>{Math.round((selectedElement.style.crop?.scale ?? 1) * 100)}%</span></label>
+                    <input
+                      type="range" min="1" max="3" step="0.1"
+                      value={selectedElement.style.crop?.scale ?? 1}
+                      onChange={(e) => updateStyle(selectedElement.id, { crop: { ...selectedElement.style.crop, scale: parseFloat(e.target.value) } })}
+                      className="w-full accent-blue-500 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  {(selectedElement.style.crop?.scale > 1) && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-gray-400 flex justify-between">Pan X <span>{selectedElement.style.crop?.x ?? 50}%</span></label>
                         <input
-                          type="text"
-                          value={tempPalette.name}
-                          onChange={(e) => setTempPalette({ ...tempPalette, name: e.target.value })}
-                          className="w-full bg-gray-900 border border-gray-600 rounded p-1.5 text-xs text-white outline-none focus:border-blue-500"
-                          placeholder="e.g. Summer Vibes"
+                          type="range" min="0" max="100"
+                          value={selectedElement.style.crop?.x ?? 50}
+                          onChange={(e) => updateStyle(selectedElement.id, { crop: { ...selectedElement.style.crop, x: parseInt(e.target.value) } })}
+                          className="w-full accent-blue-500 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400 uppercase block">Bg</label>
-                          <input type="color" value={tempPalette.bg} onChange={(e) => setTempPalette({ ...tempPalette, bg: e.target.value })} className="w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400 uppercase block">Text</label>
-                          <input type="color" value={tempPalette.text} onChange={(e) => setTempPalette({ ...tempPalette, text: e.target.value })} className="w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-gray-400 uppercase block">Accent</label>
-                          <input type="color" value={tempPalette.accent} onChange={(e) => setTempPalette({ ...tempPalette, accent: e.target.value })} className="w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
-                        </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-gray-400 flex justify-between">Pan Y <span>{selectedElement.style.crop?.y ?? 50}%</span></label>
+                        <input
+                          type="range" min="0" max="100"
+                          value={selectedElement.style.crop?.y ?? 50}
+                          onChange={(e) => updateStyle(selectedElement.id, { crop: { ...selectedElement.style.crop, y: parseInt(e.target.value) } })}
+                          className="w-full accent-blue-500 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => setIsCreatorOpen(false)} className="flex-1 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancel</button>
-                        <button onClick={saveCustomTheme} className="flex-1 py-1 text-xs bg-blue-600 hover:bg-blue-500 rounded text-white flex items-center justify-center gap-1"><Save size={12} /> Save</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Custom Themes List */}
-                  {customPalettes.length > 0 && (
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      {customPalettes.map((p, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => applyPalette(p)}
-                          className="relative flex items-center gap-2 p-2 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition text-left group"
-                        >
-                          <div className="w-6 h-6 rounded-full border border-gray-600 overflow-hidden flex shadow-sm shrink-0">
-                            <div className="h-full w-1/3" style={{ backgroundColor: p.bg }}></div>
-                            <div className="h-full w-1/3" style={{ backgroundColor: p.text }}></div>
-                            <div className="h-full w-1/3" style={{ backgroundColor: p.accent }}></div>
-                          </div>
-                          <span className="text-xs text-gray-400 group-hover:text-white font-medium truncate flex-1">{p.name}</span>
-                          <div
-                            onClick={(e) => deleteCustomTheme(e, idx)}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
-                          >
-                            <X size={10} />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    </>
                   )}
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs text-gray-500 font-semibold uppercase flex justify-between">
-                    <span>Presets</span>
-                    <span className="opacity-50 text-[10px] lowercase">Bg / Text / Accent</span>
-                  </label>
+              {/* Filters */}
+              <div className="space-y-3">
+                <label className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-2">
+                  <Sun size={12} /> Filters
+                </label>
+                <div className="space-y-3 pl-2 border-l-2 border-gray-700">
                   <div className="grid grid-cols-2 gap-3">
-                    {colorPalettes.map(p => (
-                      <button
-                        key={p.name}
-                        onClick={() => applyPalette(p)}
-                        className="flex items-center gap-2 p-2 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition text-left group"
-                      >
-                        <div className="w-8 h-8 rounded-full border border-gray-600 overflow-hidden flex shadow-sm shrink-0">
-                          <div className="h-full w-1/3" style={{ backgroundColor: p.bg }}></div>
-                          <div className="h-full w-1/3" style={{ backgroundColor: p.text }}></div>
-                          <div className="h-full w-1/3" style={{ backgroundColor: p.accent }}></div>
-                        </div>
-                        <span className="text-xs text-gray-400 group-hover:text-white font-medium">{p.name}</span>
-                      </button>
-                    ))}
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400">Grayscale</label>
+                      <input type="range" min="0" max="100" value={selectedElement.style.grayscale ?? 0} onChange={(e) => updateStyle(selectedElement.id, { grayscale: parseInt(e.target.value) })} className="w-full accent-gray-500 h-1 bg-gray-700 rounded cursor-pointer" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400">Sepia</label>
+                      <input type="range" min="0" max="100" value={selectedElement.style.sepia ?? 0} onChange={(e) => updateStyle(selectedElement.id, { sepia: parseInt(e.target.value) })} className="w-full accent-amber-600 h-1 bg-gray-700 rounded cursor-pointer" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400">Brightness</label>
+                      <input type="range" min="0" max="200" value={selectedElement.style.brightness ?? 100} onChange={(e) => updateStyle(selectedElement.id, { brightness: parseInt(e.target.value) })} className="w-full accent-yellow-500 h-1 bg-gray-700 rounded cursor-pointer" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400">Contrast</label>
+                      <input type="range" min="0" max="200" value={selectedElement.style.contrast ?? 100} onChange={(e) => updateStyle(selectedElement.id, { contrast: parseInt(e.target.value) })} className="w-full accent-gray-300 h-1 bg-gray-700 rounded cursor-pointer" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-gray-400 flex justify-between">Blur <span>{selectedElement.style.blur ?? 0}px</span></label>
+                    <input type="range" min="0" max="20" value={selectedElement.style.blur ?? 0} onChange={(e) => updateStyle(selectedElement.id, { blur: parseInt(e.target.value) })} className="w-full accent-blue-500 h-1.5 bg-gray-700 rounded-lg cursor-pointer" />
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs text-gray-500 font-semibold uppercase">Background Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={bgColor}
-                      onChange={(e) => setBgColor(e.target.value)}
-                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
-                    />
-                    <span className="text-xs text-gray-400 uppercase">{bgColor}</span>
+              {/* Effects & Border */}
+              <div className="space-y-3">
+                <label className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-2">
+                  <Droplet size={12} /> Effects
+                </label>
+                <div className="space-y-3 pl-2 border-l-2 border-gray-700">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-gray-400">Mix Blend Mode</label>
+                    <select
+                      className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-xs text-gray-300 outline-none focus:border-blue-500"
+                      value={selectedElement.style.mixBlendMode}
+                      onChange={(e) => updateStyle(selectedElement.id, { mixBlendMode: e.target.value })}
+                    >
+                      {blendModes.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400">Radius</label>
+                      <input
+                        type="number"
+                        value={parseInt(selectedElement.style.borderRadius) || 0}
+                        onChange={(e) => updateStyle(selectedElement.id, { borderRadius: parseInt(e.target.value) })}
+                        className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400">Border Width</label>
+                      <input
+                        type="number"
+                        value={parseInt(selectedElement.style.borderWidth) || 0}
+                        onChange={(e) => updateStyle(selectedElement.id, { borderWidth: parseInt(e.target.value) })}
+                        className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-gray-400">Border Color</label>
+                    <div className="flex gap-2">
+                      <input type="color" value={selectedElement.style.borderColor || '#000000'} onChange={(e) => updateStyle(selectedElement.id, { borderColor: e.target.value })} className="w-8 h-6 rounded cursor-pointer" />
+                      <input type="text" value={selectedElement.style.borderColor || '#000000'} onChange={(e) => updateStyle(selectedElement.id, { borderColor: e.target.value })} className="flex-1 bg-gray-900 border border-gray-700 rounded p-1 text-xs uppercase" />
+                    </div>
+                  </div>
+
+                  {/* Shadow Control */}
+                  <div className="space-y-1 pt-2 border-t border-gray-700">
+                    <label className="text-[10px] text-gray-400">Shadow</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        placeholder="Blur"
+                        value={selectedElement.style.shadow?.blur ?? 0}
+                        onChange={(e) => updateStyle(selectedElement.id, { shadow: { ...selectedElement.style.shadow, blur: parseInt(e.target.value) || 0 } })}
+                        className="bg-gray-900 border border-gray-700 rounded p-1.5 text-xs text-gray-300"
+                      />
+                      <input type="color" value={selectedElement.style.shadow?.color ?? '#000000'} onChange={(e) => updateStyle(selectedElement.id, { shadow: { ...selectedElement.style.shadow, color: e.target.value } })} className="w-full h-8 rounded cursor-pointer" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <input
+                        type="number"
+                        placeholder="X Offset"
+                        value={selectedElement.style.shadow?.offsetX ?? 0}
+                        onChange={(e) => updateStyle(selectedElement.id, { shadow: { ...selectedElement.style.shadow, offsetX: parseInt(e.target.value) || 0 } })}
+                        className="bg-gray-900 border border-gray-700 rounded p-1.5 text-xs text-gray-300"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Y Offset"
+                        value={selectedElement.style.shadow?.offsetY ?? 0}
+                        onChange={(e) => updateStyle(selectedElement.id, { shadow: { ...selectedElement.style.shadow, offsetY: parseInt(e.target.value) || 0 } })}
+                        className="bg-gray-900 border border-gray-700 rounded p-1.5 text-xs text-gray-300"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Shape specific controls */}
+          {selectedElement.type === 'shape' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500 font-semibold uppercase">Dimensions</label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-8">Type</span>
+                    <select
+                      className="flex-1 bg-gray-900 border border-gray-700 rounded p-1.5 text-xs text-gray-300 outline-none"
+                      value={selectedElement.style.shapeType || 'rectangle'}
+                      onChange={(e) => updateStyle(selectedElement.id, { shapeType: e.target.value })}
+                    >
+                      {shapeTypes.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-8">W</span>
+                    <input type="range" min="10" max="500" value={parseInt(selectedElement.style.width)} onChange={(e) => updateStyle(selectedElement.id, { width: parseInt(e.target.value) })} className="flex-1 accent-blue-500" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-8">H</span>
+                    <input type="range" min="10" max="500" value={parseInt(selectedElement.style.height)} onChange={(e) => updateStyle(selectedElement.id, { height: parseInt(e.target.value) })} className="flex-1 accent-blue-500" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-8">Rot</span>
+                    <input type="range" min="0" max="360" value={parseInt(selectedElement.style.rotate || 0)} onChange={(e) => updateStyle(selectedElement.id, { rotate: parseInt(e.target.value) })} className="flex-1 accent-blue-500" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-8">Op</span>
+                    <input type="range" min="0" max="1" step="0.1" value={selectedElement.style.opacity || 1} onChange={(e) => updateStyle(selectedElement.id, { opacity: parseFloat(e.target.value) })} className="flex-1 accent-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500 font-semibold uppercase">Appearance</label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400">Fill Color</span>
+                    <input type="color" value={selectedElement.style.backgroundColor} onChange={(e) => updateStyle(selectedElement.id, { backgroundColor: e.target.value })} className="w-8 h-6 rounded cursor-pointer" />
+                  </div>
+
+                  {/* Show Border controls only for Rect/Circle */}
+                  {(selectedElement.style.shapeType === 'rectangle' || selectedElement.style.shapeType === 'circle' || !selectedElement.style.shapeType) && (
+                    <div className="space-y-2 pt-2 border-t border-gray-700">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-gray-400">Border Width</label>
+                        <input
+                          type="number"
+                          value={parseInt(selectedElement.style.borderWidth) || 0}
+                          onChange={(e) => updateStyle(selectedElement.id, { borderWidth: parseInt(e.target.value) })}
+                          className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400">Border Color</span>
+                        <input type="color" value={selectedElement.style.borderColor || '#000000'} onChange={(e) => updateStyle(selectedElement.id, { borderColor: e.target.value })} className="w-8 h-6 rounded cursor-pointer" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-gray-400">Corner Radius</label>
+                        <input
+                          type="number"
+                          disabled={selectedElement.style.shapeType === 'circle'}
+                          value={parseInt(selectedElement.style.borderRadius) || 0}
+                          onChange={(e) => updateStyle(selectedElement.id, { borderRadius: parseInt(e.target.value) })}
+                          className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-xs disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
+        ) : (
+        <div className="p-6 space-y-6 pb-20 md:pb-6">
+          <div className="text-center py-8">
+            <Layers className="mx-auto text-gray-600 mb-2" size={32} />
+            <p className="text-gray-500 text-sm">Select an element to edit</p>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-gray-700">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Canvas Settings</h3>
+
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500 font-semibold uppercase">Dimensions</label>
+              <div className="flex flex-col gap-2">
+                <select
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-gray-300 outline-none focus:border-blue-500"
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') return;
+                    const size = posterSizes.find(s => s.name === e.target.value);
+                    if (size) {
+                      const isLandscape = posterSize.w > posterSize.h;
+                      const newW = isLandscape ? Math.max(size.w, size.h) : Math.min(size.w, size.h);
+                      const newH = isLandscape ? Math.min(size.w, size.h) : Math.max(size.w, size.h);
+                      setPosterSize({ w: newW, h: newH });
+                    }
+                  }}
+                  value={posterSizes.find(s =>
+                    (s.w === posterSize.w && s.h === posterSize.h) ||
+                    (s.w === posterSize.h && s.h === posterSize.w)
+                  )?.name || 'custom'}
+                >
+                  {posterSizes.map(s => (
+                    <option key={s.name} value={s.name}>{s.name}</option>
+                  ))}
+                  <option value="custom">Custom Size</option>
+                </select>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
+                    <span className="text-[10px] text-gray-500 font-bold">W</span>
+                    <input
+                      type="number"
+                      value={posterSize.w}
+                      onChange={(e) => setPosterSize({ ...posterSize, w: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-transparent text-sm outline-none text-gray-300"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
+                    <span className="text-[10px] text-gray-500 font-bold">H</span>
+                    <input
+                      type="number"
+                      value={posterSize.h}
+                      onChange={(e) => setPosterSize({ ...posterSize, h: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-transparent text-sm outline-none text-gray-300"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex bg-gray-900 border border-gray-700 rounded-lg p-1">
+                  <button
+                    className={`flex-1 text-xs py-1.5 rounded-md transition flex items-center justify-center gap-2 ${posterSize.h >= posterSize.w ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => setOrientation('portrait')}
+                  >
+                    <div className="w-2 h-3 border border-current rounded-[1px]"></div> Portrait
+                  </button>
+                  <button
+                    className={`flex-1 text-xs py-1.5 rounded-md transition flex items-center justify-center gap-2 ${posterSize.w > posterSize.h ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => setOrientation('landscape')}
+                  >
+                    <div className="w-3 h-2 border border-current rounded-[1px]"></div> Landscape
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Theme Creator */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-gray-500 font-semibold uppercase">My Themes</label>
+                <button
+                  onClick={() => setIsCreatorOpen(!isCreatorOpen)}
+                  className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                >
+                  <Plus size={12} /> New
+                </button>
+              </div>
+
+              {isCreatorOpen && (
+                <div className="bg-gray-700/50 p-3 rounded-lg space-y-3 border border-gray-600 animate-in fade-in slide-in-from-top-2">
+                  <div>
+                    <label className="text-[10px] text-gray-400 uppercase mb-1 block">Theme Name</label>
+                    <input
+                      type="text"
+                      value={tempPalette.name}
+                      onChange={(e) => setTempPalette({ ...tempPalette, name: e.target.value })}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-1.5 text-xs text-white outline-none focus:border-blue-500"
+                      placeholder="e.g. Summer Vibes"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400 uppercase block">Bg</label>
+                      <input type="color" value={tempPalette.bg} onChange={(e) => setTempPalette({ ...tempPalette, bg: e.target.value })} className="w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400 uppercase block">Text</label>
+                      <input type="color" value={tempPalette.text} onChange={(e) => setTempPalette({ ...tempPalette, text: e.target.value })} className="w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-gray-400 uppercase block">Accent</label>
+                      <input type="color" value={tempPalette.accent} onChange={(e) => setTempPalette({ ...tempPalette, accent: e.target.value })} className="w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setIsCreatorOpen(false)} className="flex-1 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded text-gray-300">Cancel</button>
+                    <button onClick={saveCustomTheme} className="flex-1 py-1 text-xs bg-blue-600 hover:bg-blue-500 rounded text-white flex items-center justify-center gap-1"><Save size={12} /> Save</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Themes List */}
+              {customPalettes.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {customPalettes.map((p, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => applyPalette(p)}
+                      className="relative flex items-center gap-2 p-2 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition text-left group"
+                    >
+                      <div className="w-6 h-6 rounded-full border border-gray-600 overflow-hidden flex shadow-sm shrink-0">
+                        <div className="h-full w-1/3" style={{ backgroundColor: p.bg }}></div>
+                        <div className="h-full w-1/3" style={{ backgroundColor: p.text }}></div>
+                        <div className="h-full w-1/3" style={{ backgroundColor: p.accent }}></div>
+                      </div>
+                      <span className="text-xs text-gray-400 group-hover:text-white font-medium truncate flex-1">{p.name}</span>
+                      <div
+                        onClick={(e) => deleteCustomTheme(e, idx)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
+                      >
+                        <X size={10} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500 font-semibold uppercase flex justify-between">
+                <span>Presets</span>
+                <span className="opacity-50 text-[10px] lowercase">Bg / Text / Accent</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {colorPalettes.map(p => (
+                  <button
+                    key={p.name}
+                    onClick={() => applyPalette(p)}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-full border border-gray-600 overflow-hidden flex shadow-sm shrink-0">
+                      <div className="h-full w-1/3" style={{ backgroundColor: p.bg }}></div>
+                      <div className="h-full w-1/3" style={{ backgroundColor: p.text }}></div>
+                      <div className="h-full w-1/3" style={{ backgroundColor: p.accent }}></div>
+                    </div>
+                    <span className="text-xs text-gray-400 group-hover:text-white font-medium">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500 font-semibold uppercase">Background Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={bgColor}
+                  onChange={(e) => setBgColor(e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                />
+                <span className="text-xs text-gray-400 uppercase">{bgColor}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+          )}
       </div>
     </div>
+    </div >
   );
 }
 
