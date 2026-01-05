@@ -79,11 +79,19 @@ export const exportProjectAsJson = (elements: CanvasElement[], canvasConfig: { w
 
 export const importProject = async (file: File): Promise<ProjectFile> => {
     try {
-        const encodedData = await file.text()
-        if (!encodedData) throw new Error('File is empty')
+        const text = await file.text()
+        if (!text) throw new Error('File is empty')
 
-        const jsonString = decodeURIComponent(escape(atob(encodedData.trim())))
-        const projectData = JSON.parse(jsonString) as ProjectFile
+        let projectData: ProjectFile
+
+        // Try parsing as JSON first
+        if (text.trim().startsWith('{')) {
+            projectData = JSON.parse(text)
+        } else {
+            // Assume base64 encoded .posterLabs format
+            const jsonString = decodeURIComponent(escape(atob(text.trim())))
+            projectData = JSON.parse(jsonString)
+        }
 
         if (projectData.header !== 'POSTERLABS_V1') {
             throw new Error('This is not a valid PosterLab project file')

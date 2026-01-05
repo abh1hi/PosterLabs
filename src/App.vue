@@ -280,8 +280,8 @@ onMounted(() => {
 
               <!-- Action Buttons -->
               <div class="flex items-center gap-1 sm:gap-2">
-                <input type="file" ref="projectInputRef" hidden accept=".posterLabs" @change="handleImportFile" />
-                <md-icon-button @click="projectInputRef?.click()" title="Open Project (.posterLabs)" class="bg-surface-high border border-outline/5 rounded-full">
+                <input type="file" ref="projectInputRef" hidden accept=".posterLabs,.json" @change="handleImportFile" />
+                <md-icon-button @click="projectInputRef?.click()" title="Open Project (.posterLabs, .json)" class="bg-surface-high border border-outline/5 rounded-full">
                     <Folder :size="20" />
                 </md-icon-button>
 
