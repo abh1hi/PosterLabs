@@ -38,13 +38,19 @@ export const exportCanvas = async (elementId: string, format: ExportFormat, file
             const imgData = await toJpeg(element, options);
 
             // Calculate PDF dimensions (A4)
-            const imgWidth = 210;
-            // We need actual aspect ratio.
-            const ratio = element.offsetHeight / element.offsetWidth;
-            const imgHeight = imgWidth * ratio;
+            const pdfWidth = 210; // A4 width in mm
+            const elementWidth = element.offsetWidth;
+            const elementHeight = element.offsetHeight;
+
+            if (!elementWidth || !elementHeight) {
+                throw new Error('Invalid element dimensions');
+            }
+
+            const ratio = elementHeight / elementWidth;
+            const pdfHeight = pdfWidth * ratio;
 
             const pdf = new jsPDF('p', 'mm', 'a4');
-            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(`${fileName}.pdf`);
             return;
         }

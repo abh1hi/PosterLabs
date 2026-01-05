@@ -31,26 +31,31 @@ export interface ProjectMeta {
 const PROJECTS_KEY = 'posterlab_projects_meta'
 const PROJECT_PREFIX = 'posterlab_project_'
 
+// Shared State (Singleton)
+const projects = ref<ProjectMeta[]>([])
+const isInitialized = ref(false)
+
+const refreshProjects = () => {
+    try {
+        const saved = localStorage.getItem(PROJECTS_KEY)
+        projects.value = saved ? JSON.parse(saved) : []
+        // Sort by UpdatedDesc
+        projects.value.sort((a, b) => b.updatedAt - a.updatedAt)
+    } catch (e) {
+        console.error('Failed to load projects list', e)
+    }
+}
+
 export function useProjects() {
     const { elements, selectedId } = useElements()
     const { posterSize, bgColor, backgroundType, gradientStyle, showGrid } = useCanvas()
     const { showToast } = useToasts()
 
-    const projects = ref<ProjectMeta[]>([])
-
-    const refreshProjects = () => {
-        try {
-            const saved = localStorage.getItem(PROJECTS_KEY)
-            projects.value = saved ? JSON.parse(saved) : []
-            // Sort by UpdatedDesc
-            projects.value.sort((a, b) => b.updatedAt - a.updatedAt)
-        } catch (e) {
-            console.error('Failed to load projects list', e)
-        }
-    }
-
     onMounted(() => {
-        refreshProjects()
+        if (!isInitialized.value) {
+            refreshProjects()
+            isInitialized.value = true
+        }
     })
 
     const saveProject = async (name: string, thumbnail?: string) => {
@@ -104,9 +109,11 @@ export function useProjects() {
 
             const data: ProjectData = JSON.parse(dataStr)
 
-            // Restore State
-            elements.value = data.elements
+            // Restore State - Explicitly nullify selection first
             selectedId.value = null
+
+            // Wait a tick or just overwrite elements
+            elements.value = JSON.parse(JSON.stringify(data.elements))
 
             if (data.settings) {
                 posterSize.value.w = data.settings.w
@@ -125,9 +132,13 @@ export function useProjects() {
                 const project = projects.value[projectIndex]
                 if (project) {
                     project.updatedAt = Date.now()
+                    // Update shared list order immediately if desired, or just persistence
                     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects.value))
                 }
             }
+
+            // Force visual refresh by triggering resize/scale update logic if needed
+            window.dispatchEvent(new Event('resize'))
 
             showToast(`Loaded "${data.name}"`, 'success')
             return true
@@ -167,12 +178,101 @@ export function useProjects() {
         showToast('New project started', 'success')
     }
 
+    const createProjectFromImport = (data: any, fileName: string) => {
+        try {
+            // Basic Validation
+            if (!data.elements || !Array.isArray(data.elements)) {
+                throw new Error('Invalid project file format')
+            }
+
+            const newId = Date.now().toString()
+
+            // Cleanup name (remove extension)
+            const cleanName = fileName.replace(/\.(json|posterLabs)$/i, '')
+            const name = cleanName || 'Imported Project'
+
+
+            // Robust Dimension Extraction
+            // Check settings.w, settings.width, root.w, root.width, root.posterSize.w
+            const extractDim = (keys: string[], fallback: number) => {
+                for (const key of keys) {
+                    // Navigate potential paths like "settings.w"
+                    const parts = key.split('.')
+                    let val: any = data
+                    for (const p of parts) {
+                        if (val && typeof val === 'object' && p in val) {
+                            val = val[p]
+                        } else {
+                            val = undefined
+                            break
+                        }
+                    }
+                    if (val !== undefined && !isNaN(Number(val))) return Number(val)
+                }
+                return fallback
+            }
+
+            const w = extractDim(['settings.w', 'settings.width', 'w', 'width', 'posterSize.w'], 1080)
+            const h = extractDim(['settings.h', 'settings.height', 'h', 'height', 'posterSize.h'], 1080)
+
+            // Background Extraction
+            const bgColor = extractDim(['settings.bgColor', 'bgColor', 'backgroundColor'], 0) || data.settings?.bgColor || data.bgColor || '#ffffff'
+
+            const projectData: ProjectData = {
+                id: newId,
+                name,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                thumbnail: data.thumbnail, // Optional
+                elements: data.elements,
+                settings: {
+                    w: w,
+                    h: h,
+                    bgColor: typeof bgColor === 'string' ? bgColor : '#ffffff',
+                    backgroundType: data.settings?.backgroundType || data.backgroundType || 'solid',
+                    gradientStyle: data.settings?.gradientStyle || data.gradientStyle || 'linear-gradient(135deg, #ffffff 0%, #000000 100%)',
+                    showGrid: data.settings?.showGrid || false
+                }
+            }
+
+            // Save to Storage
+            localStorage.setItem(PROJECT_PREFIX + newId, JSON.stringify(projectData))
+
+            // Update Meta List
+            const newMeta: ProjectMeta = {
+                id: newId,
+                name,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                thumbnail: data.thumbnail
+            }
+            const updatedProjects = [newMeta, ...projects.value]
+            localStorage.setItem(PROJECTS_KEY, JSON.stringify(updatedProjects))
+            projects.value = updatedProjects
+
+            // Load the new project
+            const success = loadProject(newId)
+
+            if (success) {
+                showToast('Project imported successfully', 'success')
+                return true
+            } else {
+                return false
+            }
+        } catch (e: any) {
+            console.error('Import failed', e)
+            showToast('Failed to import project: ' + e.message, 'error')
+            return false
+        }
+    }
+
     return {
         projects,
         saveProject,
         loadProject,
         deleteProject,
         createNewProject,
+        createProjectFromImport,
         refreshProjects
     }
 }

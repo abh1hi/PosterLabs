@@ -22,15 +22,22 @@ const gradientStyle = ref('linear-gradient(135deg, #ffffff 0%, #000000 100%)')
 const showGrid = ref(false)
 
 export const CANVAS_PRESETS = [
-    { name: 'Custom', w: 500, h: 700 }, // Fallback/Default
-    { name: 'YouTube Thumbnail', w: 1280, h: 720 },
+    { name: 'Custom', w: 1080, h: 1080 },
     { name: 'Instagram Post', w: 1080, h: 1080 },
     { name: 'Instagram Story', w: 1080, h: 1920 },
+    { name: 'Instagram Portrait', w: 1080, h: 1350 },
+    { name: 'LinkedIn Post', w: 1200, h: 627 },
+    { name: 'LinkedIn Banner', w: 1584, h: 396 },
+    { name: 'Twitter Post', w: 1600, h: 900 },
+    { name: 'Twitter Header', w: 1500, h: 500 },
     { name: 'Facebook Post', w: 1200, h: 630 },
-    { name: 'Twitter Post', w: 1200, h: 675 },
-    { name: 'A4 (Print)', w: 794, h: 1123 }, // 96 DPI
-    { name: 'Business Card', w: 336, h: 192 }, // 3.5 x 2 inch @ 96 DPI
-    { name: 'PVC Card (CR80)', w: 325, h: 204 } // 85.6mm x 54mm @ ~96 DPI (approx)
+    { name: 'Facebook Cover', w: 820, h: 312 },
+    { name: 'YouTube Thumbnail', w: 1280, h: 720 },
+    { name: 'YouTube Channel Art', w: 2560, h: 1440 },
+    { name: 'A4 (Print 300 DPI)', w: 2480, h: 3508 },
+    { name: 'A4 (Standard/Digital)', w: 794, h: 1123 }, // 96 DPI
+    { name: 'A4 (Web 72 DPI)', w: 595, h: 842 },
+    { name: 'Business Card (3.5x2")', w: 1050, h: 600 } // 300 DPI
 ]
 
 export function useCanvas() {

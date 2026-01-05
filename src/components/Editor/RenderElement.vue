@@ -12,11 +12,11 @@ const props = defineProps<{
     element: CanvasElement
 }>()
 
-const { selectedId, updateElement, deleteElement, duplicateElement } = useElements()
+const { selectedIds, updateElement, deleteElement, duplicateElement, toggleSelection } = useElements()
 const { startTransform } = useTransform()
 const { activeTab, isToolbarOpen } = useCanvas()
 
-const isSelected = computed(() => selectedId.value === props.element.id)
+const isSelected = computed(() => selectedIds.value.includes(props.element.id))
 
 const openProperties = () => {
     activeTab.value = 'properties'
@@ -73,8 +73,18 @@ const innerStyle = computed(() => {
 
 const handleSelect = (e: MouseEvent | TouchEvent) => {
     if (props.element.locked) return
-    selectedId.value = props.element.id
-    startTransform(props.element.id, 'move', e)
+    
+    const isMulti = e.shiftKey || e.ctrlKey || e.metaKey
+    toggleSelection(props.element.id, isMulti)
+    
+    // Only start transform if we are selecting it (or it's already selected)
+    // If we just deselected it, we shouldn't start transform.
+    // Actually, if we click to select, we might want to move immediately.
+    // But if we deselect, we shouldn't.
+    // Check if it is currently selected after toggle
+    if (selectedIds.value.includes(props.element.id)) {
+        startTransform(props.element.id, 'move', e)
+    }
 }
 
 const toggleLock = () => {
@@ -102,7 +112,21 @@ const toggleLock = () => {
         </template>
         
         <template v-else-if="element.type === 'image'">
-            <img :src="element.src" class="w-full h-full object-contain pointer-events-none" />
+            <div 
+                v-if="element.style.objectFit === 'cover'"
+                class="w-full h-full bg-no-repeat bg-center bg-cover pointer-events-none transition-all"
+                :style="{ 
+                    backgroundImage: `url(${element.src})`, 
+                    borderRadius: innerStyle.borderRadius,
+                    backgroundPosition: element.style.backgroundPosition || '50% 50%'
+                }"
+            ></div>
+            <img 
+                v-else 
+                :src="element.src" 
+                class="w-full h-full object-contain pointer-events-none transition-all" 
+                :style="{ borderRadius: innerStyle.borderRadius }"
+            />
         </template>
         
         <template v-else-if="element.type === 'shape'">
@@ -141,7 +165,7 @@ const toggleLock = () => {
             <button class="control-btn" @click.stop="toggleLock" title="Lock"><Unlock :size="16" /></button>
             <button class="control-btn danger" @click.stop="deleteElement(element.id)" title="Delete"><Trash2 :size="16" /></button>
             <div class="w-px h-4 bg-outline/20 mx-1"></div>
-            <button class="control-btn" @click.stop="selectedId = null" title="Deselect"><X :size="16" /></button>
+            <button class="control-btn" @click.stop="toggleSelection(element.id, true)" title="Deselect"><X :size="16" /></button>
         </div>
 
         <!-- Corner Resize Handles (M3 Style) -->

@@ -47,6 +47,8 @@ export interface ElementStyle {
     webkitTextStrokeWidth?: number
     webkitTextStrokeColor?: string
     customCss?: string
+    objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'
+    backgroundPosition?: string
 }
 
 export interface CanvasElement {
@@ -64,7 +66,11 @@ export interface CanvasElement {
 }
 
 const elements = ref<CanvasElement[]>([])
-const selectedId = ref<string | null>(null)
+const selectedIds = ref<string[]>([])
+const selectedId = computed({
+    get: () => selectedIds.value[0] || null,
+    set: (val: string | null) => { selectedIds.value = val ? [val] : [] }
+})
 const LOCAL_ELEMENTS_KEY = 'posterlab_elements'
 
 // Local History (for Undo/Redo)
@@ -82,7 +88,28 @@ const saveHistory = () => {
     historyPointer.value = history.value.length - 1
 }
 
-export function useElements() {
+const isInitialized = ref(false)
+
+export interface UseElementsReturn {
+    elements: typeof elements
+    selectedId: typeof selectedId
+    selectedIds: typeof selectedIds
+    toggleSelection: (id: string, multi: boolean) => void
+    addElement: (el: Omit<CanvasElement, 'id'>) => void
+    updateElement: (id: string, updates: Partial<CanvasElement>) => void
+    updateStyle: (id: string, styleUpdates: Partial<ElementStyle>) => void
+    deleteElement: (id: string) => void
+    duplicateElement: (id: string) => void
+    moveElement: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void
+    shuffleElements: () => void
+    commitHistory: () => void
+    undo: () => void
+    redo: () => void
+    canUndo: any
+    canRedo: any
+}
+
+export function useElements(): UseElementsReturn {
     // --- Local Persistence ---
     const saveElements = () => {
         localStorage.setItem(LOCAL_ELEMENTS_KEY, JSON.stringify(elements.value))
@@ -93,13 +120,17 @@ export function useElements() {
         const saved = localStorage.getItem(LOCAL_ELEMENTS_KEY)
         if (saved) {
             try {
-                elements.value = JSON.parse(saved)
+                const parsed = JSON.parse(saved)
+                elements.value = parsed
             } catch (e) { console.error('Failed to load elements', e) }
         }
     }
 
     onMounted(() => {
-        loadElements()
+        if (!isInitialized.value) {
+            loadElements()
+            isInitialized.value = true
+        }
     })
 
     // Auto-save on change
@@ -121,7 +152,7 @@ export function useElements() {
         const id = Date.now().toString()
         const newEl = { ...el, id, order: elements.value.length }
         elements.value.push(newEl)
-        selectedId.value = id
+        selectedIds.value = [id]
         saveElements()
     }
 
@@ -151,7 +182,7 @@ export function useElements() {
 
     const deleteElement = (id: string) => {
         elements.value = elements.value.filter((e: CanvasElement) => e.id !== id)
-        if (selectedId.value === id) selectedId.value = null
+        selectedIds.value = selectedIds.value.filter(selId => selId !== id)
         saveElements()
     }
 
@@ -164,7 +195,7 @@ export function useElements() {
             newEl.y += 20
             newEl.order = elements.value.length
             elements.value.push(newEl)
-            selectedId.value = newEl.id
+            selectedIds.value = [newEl.id]
             saveElements()
         }
     }
@@ -245,7 +276,19 @@ export function useElements() {
 
     return {
         elements,
-        selectedId,
+        selectedId, // Backward compatibility
+        selectedIds,
+        toggleSelection: (id: string, multi: boolean) => {
+            if (multi) {
+                if (selectedIds.value.includes(id)) {
+                    selectedIds.value = selectedIds.value.filter(i => i !== id)
+                } else {
+                    selectedIds.value.push(id)
+                }
+            } else {
+                selectedIds.value = [id]
+            }
+        },
         addElement,
         updateElement,
         updateStyle,
