@@ -13,7 +13,7 @@ import ReloadPrompt from './components/ReloadPrompt.vue'
 import { 
   LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save, MonitorDown,
   Menu, Settings, LogOut, CheckCircle, Info, AlertCircle,
-  Undo2, Redo2, Layers, Download, Cloud, CloudOff, Folder, Code2
+  Undo2, Redo2, Layers, Download, Cloud, CloudOff, Folder, Code2, User
 } from 'lucide-vue-next'
 
 import '@material/web/iconbutton/icon-button.js'

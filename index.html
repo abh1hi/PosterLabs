@@ -1,94 +1,165 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PosterLab</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background: #0f172a; /* Dark background matching the theme */
-        font-family: 'Inter', sans-serif;
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/pwa-512x512.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PosterLab - Create Stunning Posters & Designs</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description"
+    content="PosterLab is a powerful, intuitive tool for creating professional posters and graphic designs. Start designing for free today!" />
+  <meta name="keywords" content="poster maker, graphic design, design tool, online editor, posterlab, free design" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://poster-labs.vercel.app/" />
+
+  <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "PosterLab",
+        "operatingSystem": "Web",
+        "applicationCategory": "DesignApplication",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
       }
-      #app-loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-        transition: opacity 0.5s ease;
+    </script>
+  <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "PosterLab",
+        "url": "https://poster-labs.vercel.app/"
       }
-      .logo-container {
-        width: 120px;
-        height: 120px;
-        margin-bottom: 2rem;
-        position: relative;
-        animation: float 3s ease-in-out infinite;
+    </script>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://poster-labs.vercel.app/" />
+  <meta property="og:title" content="PosterLab - Create Stunning Posters & Designs" />
+  <meta property="og:description"
+    content="PosterLab is a powerful, intuitive tool for creating professional posters and graphic designs." />
+  <meta property="og:image" content="/pwa-512x512.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:title" content="PosterLab - Create Stunning Posters & Designs" />
+  <meta property="twitter:description"
+    content="PosterLab is a powerful, intuitive tool for creating professional posters and graphic designs." />
+  <meta property="twitter:image" content="/pwa-512x512.png" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      /* Dark background matching the theme */
+      font-family: 'Inter', sans-serif;
+    }
+
+    #app-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      transition: opacity 0.5s ease;
+    }
+
+    .logo-container {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 2rem;
+      position: relative;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5));
+    }
+
+    .loading-bar {
+      width: 200px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .loading-progress {
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #ec4899);
+      border-radius: 4px;
+      animation: load 1.5s infinite ease-in-out;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
       }
-      .logo-container img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5));
+
+      50% {
+        transform: translateY(-10px);
       }
-      .loading-bar {
-        width: 200px;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-        overflow: hidden;
+    }
+
+    @keyframes load {
+      0% {
+        transform: translateX(-100%);
       }
-      .loading-progress {
-        width: 50%;
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6, #ec4899);
-        border-radius: 4px;
-        animation: load 1.5s infinite ease-in-out;
+
+      100% {
+        transform: translateX(200%);
       }
-      @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-      }
-      @keyframes load {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(200%); }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="app">
-      <div id="app-loading">
-        <div class="logo-container">
-          <img src="/pwa-512x512.png" alt="PosterLab Logo">
-        </div>
-        <div class="loading-bar">
-          <div class="loading-progress"></div>
-        </div>
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="app-loading">
+      <div class="logo-container">
+        <img src="/pwa-512x512.png" alt="PosterLab Logo">
+      </div>
+      <div class="loading-bar">
+        <div class="loading-progress"></div>
       </div>
     </div>
-    <script type="module" src="/src/main.ts"></script>
-    <script>
-      // Remove splash screen when app mounts
-      window.addEventListener('load', () => {
-        // Small delay to ensure smooth transition
-        setTimeout(() => {
-          const loader = document.getElementById('app-loading');
-          if (loader) {
-            loader.style.opacity = '0';
-            setTimeout(() => {
-              loader.remove();
-            }, 500);
-          }
-        }, 800);
-      });
-    </script>
-  </body>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+  <script>
+    // Remove splash screen when app mounts
+    window.addEventListener('load', () => {
+      // Small delay to ensure smooth transition
+      setTimeout(() => {
+        const loader = document.getElementById('app-loading');
+        if (loader) {
+          loader.style.opacity = '0';
+          setTimeout(() => {
+            loader.remove();
+          }, 500);
+        }
+      }, 800);
+    });
+  </script>
+</body>
+
 </html>

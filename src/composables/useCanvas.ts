@@ -14,7 +14,7 @@ const isMobilePropertiesOpen = ref(false)
 const isShapesLibraryOpen = ref(false)
 const activeTool = ref<'select' | 'hand'>('select')
 const isToolbarOpen = ref(true)
-const activeTab = ref('design')
+const activeTab = ref(new URLSearchParams(window.location.search).get('tab') || 'design')
 
 // Enhanced Controls
 const backgroundType = ref<'solid' | 'gradient'>('solid')

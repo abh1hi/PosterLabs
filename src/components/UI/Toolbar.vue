@@ -14,7 +14,7 @@ import {
   Eye, EyeOff, Lock, Unlock, ArrowUpToLine, ArrowDownToLine,
   Palette, Maximize2, Trash2, Copy,
   Type, Box, Crop, Folder, Plus, Save, Wand2, AlignLeft,
-  Globe, MonitorDown, Link, X, Settings2, Code2, Info as InfoIcon
+  Globe, MonitorDown, Link, X, Settings2, Code2, Info as InfoIcon, Shuffle
 } from 'lucide-vue-next'
 import { Cropper } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'

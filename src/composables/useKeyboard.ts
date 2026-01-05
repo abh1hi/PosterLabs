@@ -18,7 +18,7 @@ export function useKeyboard() {
         const step = isShift ? 10 : 1
 
         // Delete
-        if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (e.key === 'Delete') {
             if (selectedId.value) {
                 e.preventDefault()
                 deleteElement(selectedId.value)
