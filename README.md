@@ -23,6 +23,86 @@ An advanced, browser-based poster and banner design studio built with Vue 3 and 
 - **Icons**: Lucide Vue Next
 - **Build Tool**: Vite
 
+## 🔄 System Architecture & Flows
+
+### 1. Project Initialization
+```mermaid
+sequenceDiagram
+actor User
+participant App
+participant useProjects
+participant useCanvas
+participant Storage
+User->>App: Opens Application
+App->>useProjects: Initialize
+useProjects->>Storage: Load Projects
+Storage-->>useProjects: Projects List
+alt New Project
+User->>App: Click "New Project"
+App->>useProjects: Create Project
+useProjects->>useCanvas: Reset Canvas State
+else Load Project
+User->>App: Select Project
+App->>useProjects: Load Project ID
+useProjects->>Storage: Get Project Data
+Storage-->>useProjects: Project JSON
+useProjects->>useCanvas: Hydrate State (Elements, Size, Background)
+end
+```
+
+### 2. Element Interaction Cycle
+```mermaid
+graph TD
+User([User]) -->|Select Tool| Toolbar[Toolbar UI]
+Toolbar -->|Add Element| Canvas[Canvas Area]
+Canvas -->|Render| Element[RenderElement Component]
+User -->|Click/Touch| Element
+Element -->|Set Selected| useElements[useElements Composable]
+useElements -->|Update Selection| Properties[Properties Panel]
+User -->|Edit Properties| Properties
+Properties -->|Update Store| useElements
+useElements -->|Re-render| Element
+User -->|Drag/Resize| Overlay[Transform Overlay]
+Overlay -->|Update Coordinates| useElements
+```
+
+### 3. Theme Management
+```mermaid
+sequenceDiagram
+actor User
+participant ToolbarDesign
+participant ThemeDesigner
+participant useThemes
+participant Canvas
+User->>ToolbarDesign: View Themes
+ToolbarDesign->>useThemes: Fetch Standard Themes
+opt Create Custom Theme
+User->>ThemeDesigner: Open Designer
+ThemeDesigner->>useThemes: Initialize Draft Theme
+loop Live Preview
+User->>ThemeDesigner: Change Colors/Typos
+ThemeDesigner->>useThemes: Apply Temporary
+useThemes->>Canvas: Update CSS Variables/Styles
+end
+User->>ThemeDesigner: Save Theme
+ThemeDesigner->>useThemes: Commit to Global State
+useThemes->>LocalStorage: Persist Custom Theme
+end
+```
+
+### 4. Export Workflow
+```mermaid
+graph LR
+Start([Export Request]) --> Choose{"Type?"}
+Choose -->|JSON| Serialize[Serialize useElements + useCanvas]
+Serialize --> BlobJSON[Create JSON Blob]
+BlobJSON --> Download1[Trigger Download]
+Choose -->|Image| Clone[Clone DOM Node]
+Clone --> Rast[Rasterize to Canvas]
+Rast --> BlobImg[Create PNG/JPG Blob]
+BlobImg --> Download2[Trigger Download]
+```
+
 ## 📘 Developer Manual
 For developers looking to programmatically generate templates or understand the project file structure, check out the [JSON Schema Guide](./project_schema_guide.md).
 
