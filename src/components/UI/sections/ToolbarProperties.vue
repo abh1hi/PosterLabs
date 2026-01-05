@@ -47,6 +47,18 @@ const toggleSection = (section: keyof typeof openSections.value) => {
   openSections.value[section] = !openSections.value[section]
 }
 
+// Helper to convert RGBA/RGB/Color names to Hex for input[type=color]
+const toHex = (color?: string) => {
+    if (!color) return '#000000'
+    if (color.startsWith('#')) return color
+    
+    // Create a temporary element to let the browser parse the color
+    const ctx = document.createElement('canvas').getContext('2d')
+    if (!ctx) return '#000000'
+    ctx.fillStyle = color
+    return ctx.fillStyle // Returns #rrggbb
+}
+
 const handleInput = (id: string, key: string, value: any, isStyle: boolean = false) => {
     if (isStyle) {
         updateStyle(id, { [key]: value })
@@ -203,23 +215,7 @@ const radiusValues = computed(() => {
     return { tl: 0, tr: 0, br: 0, bl: 0 }
 })
 
-const backgroundPositionValues = computed(() => {
-    if (!selectedElement.value?.style.backgroundPosition) return { x: 50, y: 50 }
-    const parts = selectedElement.value.style.backgroundPosition.split(' ')
-    // Expected format: "50% 50%"
-    return {
-        x: parseFloat(parts[0]) || 50,
-        y: parseFloat(parts[1]) || 50
-    }
-})
 
-const updateBackgroundPosition = (axis: 'x' | 'y', value: number) => {
-    if (!selectedId.value) return
-    const current = backgroundPositionValues.value
-    const newVals = { ...current, [axis]: value }
-    const str = `${newVals.x}% ${newVals.y}%`
-    handleInput(selectedId.value, 'backgroundPosition', str, true)
-}
 
 const updateRadius = (corner: 'all' | 'tl' | 'tr' | 'br' | 'bl', value: number) => {
     if (!selectedId.value) return
@@ -433,16 +429,32 @@ const updateRadius = (corner: 'all' | 'tl' | 'tr' | 'br' | 'bl', value: number) 
                             ></md-switch>
                         </div>
                         
-                        <!-- Position Controls (Only visible when Fill is active) -->
+                        <!-- Position & Zoom Controls (Only visible when Fill is active) -->
                         <div v-if="selectedElement!.style.objectFit === 'cover'" class="pt-2 border-t border-outline/10 space-y-2">
                              <div class="space-y-1">
-                                <div class="flex justify-between"><span class="label-small">Pan X</span><span class="label-small">{{ Math.round(backgroundPositionValues.x) }}%</span></div>
-                                <md-slider min="0" max="100" :value="backgroundPositionValues.x" @input="(e: any) => updateBackgroundPosition('x', parseFloat(e.target.value))"></md-slider>
+                                <div class="flex justify-between"><span class="label-small">Zoom</span><span class="label-small">{{ Math.round((selectedElement!.style.imageScale || 1) * 100) }}%</span></div>
+                                <md-slider min="1" max="3" step="0.1" :value="selectedElement!.style.imageScale || 1" @input="(e: any) => { const v = parseFloat(e.target.value); handleInput(selectedId!, 'imageScale', isNaN(v) ? 1 : v, true); }"></md-slider>
                              </div>
                              <div class="space-y-1">
-                                <div class="flex justify-between"><span class="label-small">Pan Y</span><span class="label-small">{{ Math.round(backgroundPositionValues.y) }}%</span></div>
-                                <md-slider min="0" max="100" :value="backgroundPositionValues.y" @input="(e: any) => updateBackgroundPosition('y', parseFloat(e.target.value))"></md-slider>
+                                <div class="flex justify-between"><span class="label-small">Pan X</span><span class="label-small">{{ Math.round(selectedElement!.style.imagePanX || 0) }}%</span></div>
+                                <md-slider min="-100" max="100" :value="selectedElement!.style.imagePanX || 0" @input="(e: any) => { const v = parseFloat(e.target.value); handleInput(selectedId!, 'imagePanX', isNaN(v) ? 0 : v, true); }"></md-slider>
                              </div>
+                             <div class="space-y-1">
+                                <div class="flex justify-between"><span class="label-small">Pan Y</span><span class="label-small">{{ Math.round(selectedElement!.style.imagePanY || 0) }}%</span></div>
+                                <md-slider min="-100" max="100" :value="selectedElement!.style.imagePanY || 0" @input="(e: any) => { const v = parseFloat(e.target.value); handleInput(selectedId!, 'imagePanY', isNaN(v) ? 0 : v, true); }"></md-slider>
+                             </div>
+                             
+                             <!-- Reset Button -->
+                             <button 
+                                class="w-full py-1.5 mt-2 flex items-center justify-center gap-1.5 bg-surface-variant hover:bg-surface-variant/80 text-on-surface-variant rounded-lg text-xs font-medium transition-colors"
+                                @click="() => {
+                                    handleInput(selectedId!, 'imageScale', 1, true);
+                                    handleInput(selectedId!, 'imagePanX', 0, true);
+                                    handleInput(selectedId!, 'imagePanY', 0, true);
+                                }"
+                             >
+                                <RotateCcw :size="12" /> Reset Position
+                             </button>
                         </div>
                      </div>
 
@@ -585,7 +597,7 @@ const updateRadius = (corner: 'all' | 'tl' | 'tr' | 'br' | 'bl', value: number) 
                     <div class="space-y-2 pt-2 border-t border-outline/10">
                         <h4 class="label-small uppercase text-on-surface-variant font-bold">Background</h4>
                         <div class="flex items-center gap-3 p-3 bg-surface-high rounded-xl border border-outline/10">
-                            <input type="color" :value="selectedElement!.style.backgroundColor || '#0061a4'" @input="(e: any) => handleInput(selectedId!, 'backgroundColor', e.target.value, true)" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none p-0" />
+                            <input type="color" :value="toHex(selectedElement!.style.backgroundColor || '#0061a4')" @input="(e: any) => handleInput(selectedId!, 'backgroundColor', e.target.value, true)" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none p-0" />
                             <span class="label-medium font-mono uppercase">{{ selectedElement!.style.backgroundColor || '#0061a4' }}</span>
                         </div>
                     </div>
@@ -644,7 +656,7 @@ const updateRadius = (corner: 'all' | 'tl' | 'tr' | 'br' | 'bl', value: number) 
 
                         <!-- Uniform Mode -->
                         <div v-if="isUniformRadius" class="space-y-1">
-                             <div class="flex justify-between"><div class="w-2 h-2 border border-current rounded-sm"></div><span class="label-small">{{ Math.round(radiusValues.tl) }}px</span></div>
+                             <div class="flex justify-between"><div class="w-2 h-2 border border-current rounded-sm"></div><span class="label-small">{{ Math.round(radiusValues.tl || 0) }}px</span></div>
                              <md-slider min="0" max="200" :value="radiusValues.tl" @input="(e: any) => updateRadius('all', parseFloat(e.target.value))"></md-slider>
                         </div>
                         

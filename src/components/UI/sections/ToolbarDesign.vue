@@ -6,7 +6,7 @@ import { useElements } from '../../../composables/useElements'
 import { useToasts } from '../../../composables/useToasts'
 import { LayoutTemplate } from 'lucide-vue-next'
 
-const { THEMES } = useThemes()
+const { themes } = useThemes()
 const { TEMPLATES } = useTemplates()
 const { bgColor, posterSize } = useCanvas()
 const { elements } = useElements()
@@ -30,7 +30,7 @@ const applyTemplate = (template: any) => {
         <div class="space-y-4">
             <h3 class="label-large text-on-surface-variant uppercase tracking-widest px-2">Themes</h3>
             <div class="grid grid-cols-2 gap-3">
-                <button v-for="theme in THEMES" :key="theme.id" 
+                <button v-for="theme in themes" :key="theme.id" 
                     @click="() => {
                         bgColor = theme.colors.background;
                         showToast(`Applied ${theme.name} theme`, 'success');

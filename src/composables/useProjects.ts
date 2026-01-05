@@ -163,6 +163,23 @@ export function useProjects() {
         }
     }
 
+    const deleteProjects = (ids: string[]) => {
+        if (ids.length === 0) return
+        if (!confirm(`Are you sure you want to delete these ${ids.length} projects? This cannot be undone.`)) return
+
+        try {
+            ids.forEach(id => {
+                localStorage.removeItem(PROJECT_PREFIX + id)
+            })
+            const updatedProjects = projects.value.filter(p => !ids.includes(p.id))
+            localStorage.setItem(PROJECTS_KEY, JSON.stringify(updatedProjects))
+            projects.value = updatedProjects
+            showToast(`${ids.length} projects deleted`, 'success')
+        } catch (e) {
+            showToast('Failed to delete projects', 'error')
+        }
+    }
+
     const createNewProject = () => {
         if (!confirm('Start a new project? Unsaved changes will be lost.')) return
 
@@ -273,6 +290,7 @@ export function useProjects() {
         deleteProject,
         createNewProject,
         createProjectFromImport,
-        refreshProjects
+        refreshProjects,
+        deleteProjects
     }
 }

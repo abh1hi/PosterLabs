@@ -118,7 +118,8 @@ const toggleLock = () => {
                 :style="{ 
                     backgroundImage: `url(${element.src})`, 
                     borderRadius: innerStyle.borderRadius,
-                    backgroundPosition: element.style.backgroundPosition || '50% 50%'
+                    transform: `scale(${Number.isFinite(element.style.imageScale) ? element.style.imageScale : 1}) translate(${Number.isFinite(element.style.imagePanX) ? element.style.imagePanX : 0}%, ${Number.isFinite(element.style.imagePanY) ? element.style.imagePanY : 0}%)`,
+                    transformOrigin: 'center center'
                 }"
             ></div>
             <img 

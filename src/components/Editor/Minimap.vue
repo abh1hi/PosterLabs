@@ -33,7 +33,7 @@ const viewportRect = computed(() => {
 
 // 2. Calculate Transform to fit content into Minimap Container
 const viewTransform = computed(() => {
-  const containerSize = isHovered.value ? HOVER_SIZE : Math.max(MAX_WIDTH, MAX_HEIGHT) // Use square basis for simplicity logic
+
   
   // Target Bounds to Show
   let targetX, targetY, targetW, targetH

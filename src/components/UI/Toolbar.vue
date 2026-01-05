@@ -13,6 +13,8 @@ import ToolbarText from './sections/ToolbarText.vue'
 import ToolbarProperties from './sections/ToolbarProperties.vue'
 import ToolbarCode from './sections/ToolbarCode.vue'
 import ToolbarLayers from './sections/ToolbarLayers.vue'
+import ToolbarThemes from './sections/ToolbarThemes.vue'
+import ToolbarThemeDesigner from './sections/ToolbarThemeDesigner.vue'
 import ProfilePanel from './ProfilePanel.vue'
 
 import '@material/web/textfield/filled-text-field.js'
@@ -75,6 +77,8 @@ const { selectedId, shuffleElements, duplicateElement, deleteElement } = useElem
         <ToolbarElements v-if="activeTab === 'elements'" />
         <ToolbarText v-if="activeTab === 'text'" />
         <ToolbarProperties v-if="activeTab === 'properties'" />
+        <ToolbarThemes v-if="activeTab === 'themes'" />
+        <ToolbarThemeDesigner v-if="activeTab === 'theme-designer'" />
         <ToolbarLayers v-if="activeTab === 'layers'" />
         <ToolbarCode v-if="activeTab === 'code'" />
         

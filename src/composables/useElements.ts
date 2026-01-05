@@ -49,6 +49,9 @@ export interface ElementStyle {
     customCss?: string
     objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'
     backgroundPosition?: string
+    imageScale?: number
+    imagePanX?: number
+    imagePanY?: number
 }
 
 export interface CanvasElement {

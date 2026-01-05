@@ -162,7 +162,16 @@ The `shadow` property is an nested object:
 }
 ```
 
-### Advanced: Image Cropping
+### Advanced: Image Fill & Positioning
+When using "Fill Container" mode (making images act like background covers):
+```json
+"objectFit": "cover",   // Enables fill mode
+"imageScale": 1.2,      // Zoom level (1.0 = 100%)
+"imagePanX": 50,        // Horizontal Pan (-100 to 100)
+"imagePanY": -20        // Vertical Pan (-100 to 100)
+```
+
+### Advanced: Image Cropping (Legacy)
 If an image is cropped, it uses the `crop` object:
 ```json
 "crop": {

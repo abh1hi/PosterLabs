@@ -89,8 +89,8 @@ const handleCanvasClick = (e: MouseEvent | TouchEvent) => {
                   let clientX, clientY
                   const touchEvent = e as TouchEvent
                   if (touchEvent.touches && touchEvent.touches.length > 0) {
-                      clientX = touchEvent.touches[0].clientX
-                      clientY = touchEvent.touches[0].clientY
+                      clientX = touchEvent.touches[0]!.clientX
+                      clientY = touchEvent.touches[0]!.clientY
                   } else {
                       clientX = (e as MouseEvent).clientX
                       clientY = (e as MouseEvent).clientY
@@ -269,7 +269,7 @@ const handleMouseMove = (e: MouseEvent) => {
     }
 }
 
-const handleMouseUp = (e: MouseEvent) => {
+const handleMouseUp = (_e: MouseEvent) => {
     if (isDragSelecting.value) {
         // Logic duplicated from TouchEnd - refactor? For now inline.
          const box = selectionBox.value
@@ -308,9 +308,9 @@ const handleResizeStart = (type: string, e: MouseEvent | TouchEvent) => {
     resizeHandle.value = type
     
     let clientX, clientY
-    if ('touches' in e) {
-        clientX = e.touches[0].clientX
-        clientY = e.touches[0].clientY
+    if ('touches' in e && (e as TouchEvent).touches.length > 0) {
+        clientX = (e as TouchEvent).touches[0]!.clientX
+        clientY = (e as TouchEvent).touches[0]!.clientY
     } else {
         clientX = (e as MouseEvent).clientX
         clientY = (e as MouseEvent).clientY
@@ -333,9 +333,9 @@ const handleResizeMove = (e: MouseEvent | TouchEvent) => {
     if (!isResizingCanvas.value) return
     
     let clientX, clientY
-    if ('touches' in e) {
-        clientX = e.touches[0].clientX
-        clientY = e.touches[0].clientY
+    if ('touches' in e && (e as TouchEvent).touches.length > 0) {
+        clientX = (e as TouchEvent).touches[0]!.clientX
+        clientY = (e as TouchEvent).touches[0]!.clientY
     } else {
         clientX = (e as MouseEvent).clientX
         clientY = (e as MouseEvent).clientY
