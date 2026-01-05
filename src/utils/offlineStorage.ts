@@ -4,7 +4,8 @@ const DB_VERSION = 1;
 
 export interface OfflineUpload {
     id: string;
-    file: File; // or Blob
+    file?: File | Blob;
+    url?: string; // For external images that couldn't be fetched/stored as Blob
     createdAt: number;
     status: 'pending' | 'uploading' | 'error';
 }

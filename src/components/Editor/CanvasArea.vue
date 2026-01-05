@@ -46,6 +46,7 @@ const resetZoom = () => { manualScale.value = 1; panOffset.value = { x: 0, y: 0 
 // --- Touch Gestures ---
 const lastTouchDistance = ref<number | null>(null)
 const lastTouchCenter = ref<{ x: number, y: number } | null>(null)
+const lastSingleTouch = ref<{ x: number, y: number } | null>(null)
 
 const getDistance = (t1: Touch, t2: Touch) => {
     const dx = t1.clientX - t2.clientX
@@ -64,6 +65,9 @@ const handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
         lastTouchDistance.value = getDistance(e.touches[0], e.touches[1])
         lastTouchCenter.value = getCenter(e.touches[0], e.touches[1])
+    } else if (e.touches.length === 1 && activeTool.value === 'hand') {
+        const touch = e.touches[0]
+        lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
     } else {
         handleCanvasClick(e)
     }
@@ -89,6 +93,13 @@ const handleTouchMove = (e: TouchEvent) => {
             panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
         }
         lastTouchCenter.value = center
+    } else if (e.touches.length === 1 && activeTool.value === 'hand' && lastSingleTouch.value) {
+        e.preventDefault()
+        const touch = e.touches[0]
+        const dx = touch.clientX - lastSingleTouch.value.x
+        const dy = touch.clientY - lastSingleTouch.value.y
+        panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
+        lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
     }
 }
 
@@ -96,6 +107,9 @@ const handleTouchEnd = (e: TouchEvent) => {
     if (e.touches.length < 2) {
         lastTouchDistance.value = null
         lastTouchCenter.value = null
+    }
+    if (e.touches.length === 0) {
+        lastSingleTouch.value = null
     }
 }
 
@@ -123,7 +137,12 @@ const handleWheel = (e: WheelEvent) => {
   <div 
     ref="containerRef"
     id="poster-canvas-container"
-    class="flex-1 bg-surface-lowest relative overflow-hidden flex items-center justify-center cursor-crosshair theme-transition"
+    class="flex-1 bg-surface-lowest relative overflow-hidden flex items-center justify-center theme-transition"
+    :class="{
+        'cursor-crosshair': activeTool === 'select',
+        'cursor-grab': activeTool === 'hand' && !lastSingleTouch,
+        'cursor-grabbing': activeTool === 'hand' && lastSingleTouch
+    }"
     @mousedown="handleCanvasClick"
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
@@ -176,6 +195,25 @@ const handleWheel = (e: WheelEvent) => {
             <md-icon-button @click="activeTool = 'select'" :selected="activeTool === 'select'"><MousePointer2 :size="20" /></md-icon-button>
             <md-icon-button @click="activeTool = 'hand'" :selected="activeTool === 'hand'"><Hand :size="20" /></md-icon-button>
         </div>
+
+        <!-- Zoom Slider for Hand Tool -->
+        <transition name="fade">
+            <div v-if="activeTool === 'hand'" class="bg-surface-high rounded-[28px] p-4 flex flex-col items-center gap-2 shadow-lg border border-outline/10 backdrop-blur-md">
+                <div class="flex items-center gap-3 w-32">
+                    <ZoomOut :size="16" class="text-on-surface-variant shrink-0" />
+                    <input 
+                        type="range" 
+                        v-model.number="manualScale" 
+                        min="0.2" 
+                        max="5.0" 
+                        step="0.1"
+                        class="accent-primary w-full h-1.5 bg-outline/20 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <ZoomIn :size="16" class="text-on-surface-variant shrink-0" />
+                </div>
+                <span class="label-small text-on-surface-variant font-mono">{{ Math.round(manualScale * 100) }}%</span>
+            </div>
+        </transition>
     </div>
 
     <!-- Scale Indicator -->
@@ -194,4 +232,15 @@ const handleWheel = (e: WheelEvent) => {
 .bg-surface-high { background-color: var(--md-sys-color-surface-container-high); }
 .bg-primary-container { background-color: var(--md-sys-color-primary-container); }
 .text-on-primary-container { color: var(--md-sys-color-on-primary-container); }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
+}
 </style>

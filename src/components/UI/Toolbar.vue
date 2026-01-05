@@ -14,7 +14,7 @@ import {
   Eye, EyeOff, Lock, Unlock, ArrowUpToLine, ArrowDownToLine,
   Palette, Maximize2, Trash2, Copy,
   Type, Box, Crop, Folder, Plus, Save, Wand2, AlignLeft,
-  Globe, MonitorDown, Link
+  Globe, MonitorDown, Link, X, Settings2, Code2, Info as InfoIcon
 } from 'lucide-vue-next'
 import { Cropper } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
@@ -39,7 +39,7 @@ const {
 } = useElements()
 const { posterSize, bgColor, activeTool, isToolbarOpen, backgroundType, gradientStyle, showGrid, activeTab } = useCanvas()
 const { showToast } = useToasts()
-const { uploads, isUploading, uploadImage, fetchUserMedia } = useMedia()
+const { uploads, isUploading, uploadImage, saveExternalMedia, fetchUserMedia } = useMedia()
 const { THEMES } = useThemes()
 const { TEMPLATES } = useTemplates()
 const { projects, saveProject, loadProject, deleteProject, createNewProject } = useProjects()
@@ -67,11 +67,26 @@ const toggleSection = (section: keyof typeof openSections.value) => {
 const selectedElement = computed(() => elements.value.find(e => e.id === selectedId.value))
 const sortedLayers = computed(() => [...elements.value].reverse())
 
-const handleInput = (id: any, field: string, value: any, isStyle = false) => {
+const addCustomElement = () => {
+    handleAddElement({
+        type: 'custom',
+        customHtml: '<div class="my-custom-box">Hello Custom Code!</div>',
+        x: 100,
+        y: 100,
+        style: {
+            width: 200,
+            height: 100,
+            customCss: 'selector { \n  background: linear-gradient(45deg, #FF512F, #DD2476); \n  color: white; \n  display: flex; \n  align-items: center; \n  justify-content: center; \n  font-weight: bold; \n  border-radius: 12px;\n}'
+        }
+    })
+    activeTab.value = 'code'
+}
+
+const handleInput = (id: string, key: string, value: any, isStyle: boolean = false) => {
     if (isStyle) {
-        updateStyle(id, { [field]: value })
+        updateStyle(id, { [key]: value })
     } else {
-        updateElement(id, { [field]: value })
+        updateElement(id, { [key]: value })
     }
 }
 
@@ -140,7 +155,8 @@ const handleImageUpload = async (e: Event) => {
             width: 300,
             height: 300,
             opacity: 1,
-            rotate: 0
+            rotate: 0,
+            borderRadius: 0
         }
       })
       showToast('Image uploaded and added', 'success')
@@ -148,6 +164,60 @@ const handleImageUpload = async (e: Event) => {
       showToast(err.message || 'Failed to upload image', 'error')
     }
   }
+}
+
+const addMediaByUrl = async () => {
+    const url = window.prompt('Enter image URL:')
+    if (!url) return
+
+    try {
+        // Validation
+        new URL(url)
+        
+        // Attempt to "upload" it to local storage to make it persistent/offline-friendly
+        // This might fail due to CORS, but we can fall back to direct URL
+        try {
+            const response = await fetch(url)
+            const blob = await response.blob()
+            const fileName = url.split('/').pop() || 'external-image'
+            const file = new File([blob], fileName, { type: blob.type })
+            const mediaDoc = await uploadImage(file)
+            
+            handleAddElement({
+                type: 'image',
+                src: mediaDoc.url,
+                x: 100,
+                y: 100,
+                style: {
+                    width: 300,
+                    height: 300,
+                    opacity: 1,
+                    rotate: 0,
+                    borderRadius: 0
+                }
+            })
+            showToast('Image added and saved locally', 'success')
+        } catch (corsErr) {
+            console.warn('CORS restricted image, adding direct URL instead', corsErr)
+            await saveExternalMedia(url)
+            handleAddElement({
+                type: 'image',
+                src: url,
+                x: 100,
+                y: 100,
+                style: {
+                    width: 300,
+                    height: 300,
+                    opacity: 1,
+                    rotate: 0,
+                    borderRadius: 0
+                }
+            })
+            showToast('Image added and URL saved for reuse', 'success')
+        }
+    } catch (e: any) {
+        showToast('Invalid URL or failed to add image', 'error')
+    }
 }
 
 const addShape = (shapeType: string) => {
@@ -504,10 +574,29 @@ const saveInlineCrop = async () => {
                       <ImageIcon v-else :size="32" class="text-primary" />
                       <span class="label-small">{{ isUploading ? 'Uploading...' : 'Upload Image' }}</span>
                    </button>
+                   <button @click="addMediaByUrl" class="aspect-square bg-surface-high rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-secondary-container transition-colors cursor-pointer border border-dashed border-outline/20">
+                      <Link :size="32" class="text-secondary" />
+                      <span class="label-small">Add URL</span>
+                   </button>
                   <input type="file" hidden ref="fileInputRef" accept="image/*" @change="handleImageUpload" />
 
                    <button v-for="media in uploads" :key="media.id" @click="handleAddElement({ type: 'image', src: media.url, x: 100, y: 100, style: { width: 300, height: 300, opacity: 1, rotate: 0 } })" class="aspect-square bg-surface-high rounded-2xl overflow-hidden cursor-pointer border border-outline/10 hover:border-primary transition-all group p-0">
                       <img :src="media.url" class="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                   </button>
+               </div>
+            </div>
+
+            <div class="space-y-4">
+               <h3 class="label-large text-on-surface-variant uppercase tracking-widest px-2">Advanced</h3>
+                <div class="grid grid-cols-1 gap-3">
+                   <button @click="addCustomElement" class="p-4 bg-surface-high rounded-2xl flex items-center gap-4 hover:bg-primary-container transition-colors cursor-pointer border border-outline/10">
+                      <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                         <Code2 :size="24" />
+                      </div>
+                      <div class="text-left">
+                         <div class="label-large font-bold">Custom Element</div>
+                         <div class="label-small opacity-60">Add raw HTML & CSS</div>
+                      </div>
                    </button>
                </div>
             </div>
@@ -700,12 +789,11 @@ const saveInlineCrop = async () => {
 
                 <!-- Image Adjustments (Image Only) -->
                 <div v-if="selectedElement.type === 'image'" class="section-container">
-                     <button @click="toggleSection('image')" class="section-header">
+                    <button @click="toggleSection('image')" class="section-header">
                         <div class="flex items-center gap-3"><ImageIcon :size="16" /><span class="label-large">Image Adjustments</span></div>
                         <ChevronDown v-if="openSections.image" :size="16" /><ChevronRight v-else :size="16" />
                     </button>
                     <div v-if="openSections.image" class="space-y-4 px-4 pb-4">
-                        
                         <!-- Inline Cropper Mode -->
                         <div v-if="isCropping" class="flex flex-col gap-3">
                              <div class="h-64 bg-black/50 rounded-lg overflow-hidden relative">
@@ -810,7 +898,44 @@ const saveInlineCrop = async () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
+                <!-- Shape Adjustments (Shape Only) -->
+                <div v-if="selectedElement.type === 'shape'" class="section-container">
+                    <button @click="toggleSection('appearance')" class="section-header">
+                        <div class="flex items-center gap-3"><Shapes :size="16" /><span class="label-large">Shape Properties</span></div>
+                        <ChevronDown v-if="openSections.appearance" :size="16" /><ChevronRight v-else :size="16" />
+                    </button>
+                    <div v-if="openSections.appearance" class="space-y-4 px-4 pb-4">
+                        <div class="space-y-2">
+                             <h4 class="label-small uppercase text-on-surface-variant font-bold">Shape Type</h4>
+                             <div class="grid grid-cols-3 gap-2">
+                                 <button v-for="type in ['rectangle', 'circle', 'triangle']" :key="type" 
+                                     @click="handleInput(selectedId, 'shapeType', type, true)"
+                                     class="py-2 rounded-lg border transition-all text-sm capitalize"
+                                     :class="selectedElement.style.shapeType === type ? 'bg-primary-container border-primary text-on-primary-container font-bold' : 'bg-surface-high border-outline/10'"
+                                 >
+                                     {{ type }}
+                                 </button>
+                             </div>
+                        </div>
+
+                        <div class="space-y-2 pt-2 border-t border-outline/10">
+                            <h4 class="label-small uppercase text-on-surface-variant font-bold">Background</h4>
+                            <div class="flex items-center gap-3 p-3 bg-surface-high rounded-xl border border-outline/10">
+                                <input type="color" :value="selectedElement.style.backgroundColor || '#0061a4'" @input="(e: any) => handleInput(selectedId, 'backgroundColor', e.target.value, true)" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none p-0" />
+                                <span class="label-medium font-mono uppercase">{{ selectedElement.style.backgroundColor || '#0061a4' }}</span>
+                            </div>
+                        </div>
+
+                         <div class="space-y-2 pt-2 border-t border-outline/10" v-if="selectedElement.style.shapeType !== 'circle'">
+                            <div class="flex justify-between items-center">
+                                <h4 class="label-small uppercase text-on-surface-variant font-bold">Corner Radius</h4>
+                                <span class="label-small">{{ parseInt(String(selectedElement.style.borderRadius || 0)) }}px</span>
+                            </div>
+                            <md-slider min="0" max="200" :value="parseInt(String(selectedElement.style.borderRadius || 0))" @input="(e: any) => handleInput(selectedId, 'borderRadius', e.target.value, true)"></md-slider>
+                         </div>
                     </div>
                 </div>
 
@@ -930,6 +1055,54 @@ const saveInlineCrop = async () => {
             </div>
         </div>
 
+        <!-- Tab: Code -->
+        <div v-if="activeTab === 'code'" class="p-4 flex flex-col gap-6">
+            <div v-if="!selectedElement" class="p-8 text-center text-on-surface-variant opacity-60">
+                <Code2 :size="48" class="mx-auto mb-2 opacity-50" />
+                <p class="body-medium">Select an element to edit its code</p>
+                <md-filled-button @click="addCustomElement" class="mt-4">Create Custom Element</md-filled-button>
+            </div>
+            
+            <div v-else class="space-y-6">
+                <div class="section-container !p-0 overflow-hidden">
+                    <div class="section-header !bg-primary/5 text-primary">
+                        <div class="flex items-center gap-3"><Code2 :size="16" /><span class="label-large">HTML Markup</span></div>
+                    </div>
+                    <div class="p-4 space-y-2">
+                        <p class="label-small text-on-surface-variant/70">Custom HTML content for this element.</p>
+                        <textarea 
+                            class="w-full h-40 p-3 rounded-xl bg-surface-high border border-outline/10 focus:border-primary outline-none font-mono text-xs transition-colors"
+                            :value="selectedElement.customHtml"
+                            @input="(e: any) => updateElement(selectedId!, { customHtml: e.target.value })"
+                            placeholder="<div>...</div>"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="section-container !p-0 overflow-hidden">
+                    <div class="section-header !bg-secondary/5 text-secondary">
+                        <div class="flex items-center gap-3"><Palette :size="16" /><span class="label-large">CSS Styles</span></div>
+                    </div>
+                    <div class="p-4 space-y-2">
+                        <p class="label-small text-on-surface-variant/70">Use <code class="bg-surface-variant px-1 rounded">selector</code> to target this element.</p>
+                        <textarea 
+                            class="w-full h-40 p-3 rounded-xl bg-surface-high border border-outline/10 focus:border-primary outline-none font-mono text-xs transition-colors"
+                            :value="selectedElement.style.customCss"
+                            @input="(e: any) => handleInput(selectedId!, 'customCss', e.target.value, true)"
+                            placeholder="selector { ... }"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="bg-surface-variant p-4 rounded-2xl flex items-start gap-3">
+                    <InfoIcon :size="16" class="mt-0.5 text-primary shrink-0" />
+                    <p class="label-small text-on-surface-variant leading-relaxed">
+                        Custom code allows you to create complex elements or add unique animations. Be careful as malformed HTML or CSS could affect your browser's performance.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Layers -->
         <div v-if="activeTab === 'layers'" class="p-2 flex flex-col gap-2">
             <div v-if="elements.length === 0" class="p-8 text-center text-on-surface-variant opacity-60">
@@ -979,6 +1152,7 @@ const saveInlineCrop = async () => {
                             <md-icon-button @click.stop="moveElement(layer.id, 'top')" title="Bring to Front"><ArrowUpToLine :size="14" /></md-icon-button>
                         </div>
                         <div class="flex items-center gap-1">
+                            <md-icon-button @click.stop="activeTab = 'properties'" title="Edit Properties"><Settings2 :size="14" /></md-icon-button>
                             <md-icon-button @click.stop="duplicateElement(layer.id)" title="Duplicate"><Copy :size="14" /></md-icon-button>
                             <md-icon-button @click.stop="deleteElement(layer.id)" class="text-error" title="Delete"><Trash2 :size="14" /></md-icon-button>
                         </div>

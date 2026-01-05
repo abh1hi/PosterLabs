@@ -1,4 +1,4 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 
 
@@ -46,13 +46,15 @@ export interface ElementStyle {
     textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
     webkitTextStrokeWidth?: number
     webkitTextStrokeColor?: string
+    customCss?: string
 }
 
 export interface CanvasElement {
     id: string
-    type: 'text' | 'image' | 'shape'
+    type: 'text' | 'image' | 'shape' | 'custom'
     content?: string
     src?: string
+    customHtml?: string
     x: number
     y: number
     style: ElementStyle
@@ -99,6 +101,21 @@ export function useElements() {
     onMounted(() => {
         loadElements()
     })
+
+    // Auto-save on change
+    watch(elements, () => {
+        // We only save if there's no active "action" that already calls saveElements
+        // But to be safe and simple, let's just debounce it.
+        debouncedSave()
+    }, { deep: true })
+
+    let saveTimeout: any = null
+    const debouncedSave = () => {
+        if (saveTimeout) clearTimeout(saveTimeout)
+        saveTimeout = setTimeout(() => {
+            saveElements()
+        }, 500)
+    }
 
     const addElement = (el: Omit<CanvasElement, 'id'>) => {
         const id = Date.now().toString()

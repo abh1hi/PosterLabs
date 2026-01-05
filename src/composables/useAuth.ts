@@ -11,9 +11,25 @@ import {
     type User
 } from 'firebase/auth';
 
-const currentUser = ref<User | null>(null);
-const isGuest = ref(false);
-const isLoading = ref(true);
+const currentUser = ref<User | null>({
+    uid: 'default-user',
+    displayName: 'Designer',
+    email: 'designer@posterlab.com',
+    photoURL: null,
+    emailVerified: true,
+    isAnonymous: false,
+    metadata: {},
+    providerData: [],
+    refreshToken: '',
+    tenantId: null,
+    delete: async () => { },
+    getIdToken: async () => '',
+    getIdTokenResult: async () => ({} as any),
+    reload: async () => { },
+    toJSON: () => ({})
+} as unknown as User);
+const isGuest = ref(true);
+const isLoading = ref(false);
 
 export function useAuth() {
 

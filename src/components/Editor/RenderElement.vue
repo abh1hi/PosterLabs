@@ -43,7 +43,7 @@ const innerStyle = computed(() => {
         fontStyle: s.fontStyle,
         color: s.color,
         textAlign: s.textAlign,
-        backgroundColor: s.backgroundColor,
+        backgroundColor: props.element.type !== 'shape' ? s.backgroundColor : undefined,
         borderRadius: typeof s.borderRadius === 'number' ? `${s.borderRadius}px` : s.borderRadius,
         borderWidth: s.borderWidth ? `${s.borderWidth}px` : undefined,
         borderColor: s.borderColor,
@@ -106,14 +106,23 @@ const toggleLock = () => {
         </template>
         
         <template v-else-if="element.type === 'shape'">
+            <div class="w-full h-full transition-all overflow-hidden" :style="{ borderRadius: innerStyle.borderRadius }">
+                <svg v-if="element.style.shapeType === 'circle'" viewBox="0 0 100 100" class="w-full h-full" :style="{ fill: element.style.backgroundColor || '#0061a4' }">
+                    <circle cx="50" cy="50" r="50" />
+                </svg>
+                <svg v-else-if="element.style.shapeType === 'triangle'" viewBox="0 0 100 100" class="w-full h-full" :style="{ fill: element.style.backgroundColor || '#0061a4' }">
+                    <path d="M50 0 L100 100 L0 100 Z" />
+                </svg>
+                <div v-else class="w-full h-full" :style="{ backgroundColor: element.style.backgroundColor || '#0061a4', borderRadius: innerStyle.borderRadius }"></div>
+            </div>
+        </template>
+
+        <template v-else-if="element.type === 'custom'">
             <div class="w-full h-full transition-all">
-                <svg v-if="element.style.shapeType === 'circle'" viewBox="0 0 100 100" class="w-full h-full fill-current">
-                    <circle cx="50" cy="50" r="48" />
-                </svg>
-                <svg v-else-if="element.style.shapeType === 'triangle'" viewBox="0 0 100 100" class="w-full h-full fill-current">
-                    <path d="M50 5 L95 95 L5 95 Z" />
-                </svg>
-                <div v-else class="w-full h-full bg-current"></div>
+                <component is="style" v-if="element.style.customCss">
+                    {{ element.style.customCss.replace(/selector/g, `[data-element-id="${element.id}"] .custom-content`) }}
+                </component>
+                <div class="custom-content w-full h-full" v-html="element.customHtml || '<div style=\'padding:20px;background:#eee\'>Custom HTML</div>'"></div>
             </div>
         </template>
     </div>

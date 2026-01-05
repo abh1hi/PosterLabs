@@ -15,7 +15,7 @@ import ReloadPrompt from './components/ReloadPrompt.vue'
 import { 
   LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save, MonitorDown,
   Menu, Settings, LogOut, CheckCircle, Info, AlertCircle,
-  Undo2, Redo2, Layers, Download, User, Cloud, CloudOff, Folder
+  Undo2, Redo2, Layers, Download, User, Cloud, CloudOff, Folder, Code2
 } from 'lucide-vue-next'
 
 import '@material/web/iconbutton/icon-button.js'
@@ -151,17 +151,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="isAuthLoading" class="fixed inset-0 flex items-center justify-center bg-surface">
-     <div class="flex flex-col items-center gap-4">
-        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p class="label-large text-primary animate-pulse">Initializing PosterLab...</p>
-     </div>
-  </div>
-
-  <template v-else>
-    <LoginView v-if="!currentUser" />
-    
-    <div v-else class="flex h-screen bg-background theme-transition overflow-hidden">
+    <div class="flex h-screen bg-background theme-transition overflow-hidden">
       
       <!-- [Desktop] Navigation Rail -->
       <nav class="hidden md:flex flex-col w-20 bg-surface-low border-r border-outline/10 z-50 py-4 shrink-0 items-center justify-between h-full">
@@ -196,6 +186,10 @@ onMounted(() => {
                    <Settings :size="20" />
                    <span class="rail-label">Props</span>
                 </button>
+                <button @click="handleTabChange('code')" class="rail-item" :class="{ active: activeTab === 'code' }">
+                   <Code2 :size="20" />
+                   <span class="rail-label">Code</span>
+                </button>
                 <div class="mt-auto w-full pt-4 border-t border-outline/10 shrink-0"></div>
                 <button @click="handleTabChange('profile')" class="rail-item shrink-0" :class="{ active: activeTab === 'profile' }">
                    <User :size="20" />
@@ -209,7 +203,7 @@ onMounted(() => {
                <Menu :size="20" />
             </md-icon-button>
             <md-icon-button id="user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen">
-               <img v-if="currentUser.photoURL" :src="currentUser.photoURL" class="w-8 h-8 rounded-full" />
+               <img v-if="currentUser?.photoURL" :src="currentUser.photoURL" class="w-8 h-8 rounded-full" />
                <Menu v-else :size="20" />
             </md-icon-button>
             <md-menu anchor="user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false">
@@ -338,7 +332,7 @@ onMounted(() => {
               <!-- Profile Avatar (Integrated) -->
               <div class="ml-1 sm:ml-2">
                  <md-icon-button id="header-user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen" class="w-8 h-8 sm:w-10 sm:h-10 p-0 overflow-hidden ring-1 ring-outline/10">
-                    <img v-if="currentUser.photoURL" :src="currentUser.photoURL" class="w-full h-full object-cover" />
+                    <img v-if="currentUser?.photoURL" :src="currentUser.photoURL" class="w-full h-full object-cover" />
                     <User v-else :size="20" class="text-on-surface-variant" />
                  </md-icon-button>
                  <md-menu anchor="header-user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false" positioning="popover">
@@ -404,12 +398,18 @@ onMounted(() => {
                 </div>
                 <span class="label-small">Layers</span>
              </button>
-            <button @click="handleTabChange('properties')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'properties' ? 'text-primary' : 'text-on-surface-variant'">
-               <div :class="activeTab === 'properties' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
-                  <Settings :size="20" />
-               </div>
-               <span class="label-small">Props</span>
-            </button>
+             <button @click="handleTabChange('properties')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'properties' ? 'text-primary' : 'text-on-surface-variant'">
+                <div :class="activeTab === 'properties' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                   <Settings :size="20" />
+                </div>
+                <span class="label-small">Props</span>
+             </button>
+             <button @click="handleTabChange('code')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'code' ? 'text-primary' : 'text-on-surface-variant'">
+                <div :class="activeTab === 'code' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                   <Code2 :size="20" />
+                </div>
+                <span class="label-small">Code</span>
+             </button>
             <button @click="handleTabChange('profile')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'profile' ? 'text-primary' : 'text-on-surface-variant'">
                <div :class="activeTab === 'profile' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
                   <User :size="20" />
@@ -437,7 +437,6 @@ onMounted(() => {
     </div>
 
     <ReloadPrompt />
-  </template>
 </template>
 
 <style>

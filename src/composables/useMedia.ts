@@ -1,7 +1,6 @@
 import { ref } from 'vue'
-import { useAuth } from './useAuth'
 import { useToasts } from './useToasts'
-import { saveOfflineUpload, getOfflineUploads, deleteOfflineUpload } from '../utils/offlineStorage'
+import { saveOfflineUpload, getOfflineUploads } from '../utils/offlineStorage'
 
 export interface MediaItem {
     id: string
@@ -13,14 +12,11 @@ export interface MediaItem {
 }
 
 export function useMedia() {
-    const { currentUser } = useAuth()
     const { showToast } = useToasts()
     const uploads = ref<MediaItem[]>([])
     const isUploading = ref(false)
 
     const uploadImage = async (file: File) => {
-        if (!currentUser.value) throw new Error('Authentication required')
-
         isUploading.value = true
         try {
             // Save to IndexedDB
@@ -62,17 +58,28 @@ export function useMedia() {
         getOfflineUploads().then(offline => {
             uploads.value = offline.map(item => ({
                 id: item.id,
-                url: URL.createObjectURL(item.file),
-                name: (item.file as File).name,
-                size: item.file.size,
-                type: item.file.type,
+                url: item.file ? URL.createObjectURL(item.file as Blob) : (item.url || ''),
+                name: item.file ? (item.file as File).name : (item.url?.split('/').pop() || 'External Image'),
+                size: item.file ? item.file.size : 0,
+                type: item.file ? item.file.type : 'image/url',
                 createdAt: item.createdAt
             }))
         })
     }
 
+    const saveExternalMedia = async (url: string) => {
+        const id = `url-${Date.now()}`
+        await saveOfflineUpload({
+            id,
+            url,
+            createdAt: Date.now(),
+            status: 'pending'
+        })
+        refreshMedia()
+        return { id, url }
+    }
+
     const fetchUserMedia = () => {
-        if (!currentUser.value) return
         refreshMedia()
     }
 
@@ -80,6 +87,7 @@ export function useMedia() {
         uploads,
         isUploading,
         uploadImage,
+        saveExternalMedia,
         fetchUserMedia
     }
 }
