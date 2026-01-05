@@ -1,0 +1,84 @@
+﻿src/App.vue(6,1): error TS6133: 'useMedia' is declared but its value is never read.
+src/App.vue(9,1): error TS6133: 'LoginView' is declared but its value is never read.
+src/components/Editor/CanvasArea.vue(11,42): error TS6133: 'isPanning' is declared but its value is never read.
+src/components/Editor/CanvasArea.vue(66,47): error TS2345: Argument of type 'Touch | undefined' is not assignable to parameter of type 'Touch'.
+  Type 'undefined' is not assignable to type 'Touch'.
+src/components/Editor/CanvasArea.vue(67,43): error TS2345: Argument of type 'Touch | undefined' is not assignable to parameter of type 'Touch'.
+  Type 'undefined' is not assignable to type 'Touch'.
+src/components/Editor/CanvasArea.vue(70,38): error TS18048: 'touch' is possibly 'undefined'.
+src/components/Editor/CanvasArea.vue(70,56): error TS18048: 'touch' is possibly 'undefined'.
+src/components/Editor/CanvasArea.vue(81,34): error TS2345: Argument of type 'Touch | undefined' is not assignable to parameter of type 'Touch'.
+  Type 'undefined' is not assignable to type 'Touch'.
+src/components/Editor/CanvasArea.vue(89,34): error TS2345: Argument of type 'Touch | undefined' is not assignable to parameter of type 'Touch'.
+  Type 'undefined' is not assignable to type 'Touch'.
+src/components/Editor/CanvasArea.vue(99,20): error TS18048: 'touch' is possibly 'undefined'.
+src/components/Editor/CanvasArea.vue(100,20): error TS18048: 'touch' is possibly 'undefined'.
+src/components/Editor/CanvasArea.vue(102,38): error TS18048: 'touch' is possibly 'undefined'.
+src/components/Editor/CanvasArea.vue(102,56): error TS18048: 'touch' is possibly 'undefined'.
+src/components/UI/ProfilePanel.vue(4,3): error TS6133: 'User' is declared but its value is never read.
+src/components/UI/ProfilePanel.vue(5,13): error TS6133: 'RefreshCw' is declared but its value is never read.
+src/components/UI/ProfilePanel.vue(16,9): error TS2339: Property 'syncOfflineUploads' does not exist on type '{ uploads: Ref<{ id: string; url: string; name: string; size: number; type: string; createdAt: any; }[], MediaItem[] | { id: string; url: string; name: string; size: number; type: string; createdAt: any; }[]>; isUploading: Ref<...>; uploadImage: (file: File) => Promise<...>; saveExternalMedia: (url: string) => Promi...'.
+src/components/UI/Toolbar.vue(46,9): error TS6133: 'installedFonts' is declared but its value is never read.
+src/components/UI/Toolbar.vue(46,25): error TS6133: 'googleFonts' is declared but its value is never read.
+src/components/UI/Toolbar.vue(308,25): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(342,17): error TS2559: Type 'false' has no properties in common with type 'IIncludeUIOptions'.
+src/components/UI/Toolbar.vue(352,48): error TS18048: 'selectedElement.value' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(393,62): error TS6133: 'result' is declared but its value is never read.
+src/components/UI/Toolbar.vue(421,17): error TS2353: Object literal may only specify known properties, and 'brightness' does not exist in type 'Partial<CanvasElement>'.
+src/components/UI/Toolbar.vue(598,30): error TS2339: Property 'confirm' does not exist on type '{ isToolbarOpen: boolean; activeTab: string; shuffleElements: () => void; selectedId: string | null; duplicateElement: (id: string) => void; deleteElement: (id: string) => void; createNewProject: () => void; ... 103 more ...; _pStores?: Record<...> | undefined; }'.
+src/components/UI/Toolbar.vue(599,40): error TS2551: Property 'value' does not exist on type '{ id: string; type: "text" | "image" | "shape" | "custom"; content?: string | undefined; src?: string | undefined; customHtml?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; ... 33 more ...; customCss?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefi...'. Did you mean 'values'?
+src/components/UI/Toolbar.vue(838,133): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(838,160): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(840,165): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(840,192): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(841,165): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(841,192): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(842,184): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(842,211): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(929,163): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(933,161): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(937,161): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(943,142): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(947,144): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(951,148): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(955,145): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(961,144): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(969,65): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(970,65): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(988,58): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(1010,157): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(1065,133): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(1065,160): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(1067,165): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(1067,192): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(1068,165): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(1068,192): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(1069,184): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(1069,211): error TS18048: '__VLS_ctx.selectedElement' is possibly 'undefined'.
+src/components/UI/Toolbar.vue(1085,40): error TS2339: Property 'CANVAS_PRESETS' does not exist on type '{ isToolbarOpen: boolean; activeTab: string; shuffleElements: () => void; selectedId: string | null; duplicateElement: (id: string) => void; deleteElement: (id: string) => void; createNewProject: () => void; ... 103 more ...; _pStores?: Record<...> | undefined; }'.
+src/components/UI/Toolbar.vue(1085,60): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/components/UI/Toolbar.vue(1088,60): error TS2339: Property 'CANVAS_PRESETS' does not exist on type '{ isToolbarOpen: boolean; activeTab: string; shuffleElements: () => void; selectedId: string | null; duplicateElement: (id: string) => void; deleteElement: (id: string) => void; createNewProject: () => void; ... 103 more ...; _pStores?: Record<...> | undefined; }'.
+src/composables/useProjects.ts(125,17): error TS2532: Object is possibly 'undefined'.
+src/views/ProfileView.vue(6,3): error TS6133: 'User' is declared but its value is never read.
+src/views/ProfileView.vue(7,13): error TS6133: 'RefreshCw' is declared but its value is never read.

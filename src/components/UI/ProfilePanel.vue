@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useAuth } from '../../composables/useAuth'
 import { 
-  User, Mail, LogOut, CheckCircle, Phone, 
-  Download, RefreshCw
+  Mail, LogOut, CheckCircle, Phone, 
+  Download
 } from 'lucide-vue-next'
 
 import '@material/web/button/filled-button.js'
@@ -13,7 +13,7 @@ import '@material/web/iconbutton/icon-button.js'
 import { useMedia } from '../../composables/useMedia'
 
 const { currentUser, logout } = useAuth()
-const { syncOfflineUploads } = useMedia()
+const {  } = useMedia()
 
 
 
@@ -24,11 +24,6 @@ const { needRefresh, updateServiceWorker } = useRegisterSW()
 const appVersion = '1.0.0'
 
 const handleLogout = async () => {
-    try {
-        await syncOfflineUploads()
-    } catch (e) {
-        console.error('Logout sync failed', e)
-    }
     await logout()
 }
 </script>

@@ -1,0 +1,12 @@
+﻿
+> poster-lab@0.0.0 build
+> vue-tsc -b && vite build
+
+src/components/UI/Toolbar.vue(308,25): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/UI/Toolbar.vue(393,62): error TS6133: 'result' is declared but its value is never read.
+src/components/UI/Toolbar.vue(598,31): error TS2339: Property 'window' does not exist on type '{ isToolbarOpen: boolean; activeTab: string; shuffleElements: () => void; selectedId: string | null; duplicateElement: (id: string) => void; deleteElement: (id: string) => void; createNewProject: () => void; ... 104 more ...; _pStores?: Record<...> | undefined; }'.
+src/components/UI/Toolbar.vue(599,41): error TS2551: Property 'value' does not exist on type '{ id: string; type: "text" | "image" | "shape" | "custom"; content?: string | undefined; src?: string | undefined; customHtml?: string | undefined; x: number; y: number; style: { fontSize?: number | undefined; ... 33 more ...; customCss?: string | undefined; }; hidden?: boolean | undefined; locked?: boolean | undefi...'. Did you mean 'values'?
+src/components/UI/Toolbar.vue(600,43): error TS2339: Property 'value' does not exist on type '{ w: number; h: number; }'.
+src/components/UI/Toolbar.vue(601,43): error TS2339: Property 'value' does not exist on type '{ w: number; h: number; }'.
+src/components/UI/Toolbar.vue(602,40): error TS2551: Property 'value' does not exist on type 'string'. Did you mean 'valueOf'?

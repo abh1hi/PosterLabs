@@ -122,8 +122,11 @@ export function useProjects() {
             // Update "updatedAt"
             const projectIndex = projects.value.findIndex(p => p.id === id)
             if (projectIndex !== -1) {
-                projects.value[projectIndex].updatedAt = Date.now()
-                localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects.value))
+                const project = projects.value[projectIndex]
+                if (project) {
+                    project.updatedAt = Date.now()
+                    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects.value))
+                }
             }
 
             showToast(`Loaded "${data.name}"`, 'success')

@@ -8,7 +8,7 @@ import '@material/web/iconbutton/icon-button.js'
 
 const { elements, selectedId } = useElements()
 const { 
-  posterSize, bgColor, scale, panOffset, isPanning,
+  posterSize, bgColor, scale, panOffset,
   backgroundType, gradientStyle, showGrid,
   manualScale, activeTool
 } = useCanvas()
@@ -63,10 +63,10 @@ const getCenter = (t1: Touch, t2: Touch) => {
 
 const handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
-        lastTouchDistance.value = getDistance(e.touches[0], e.touches[1])
-        lastTouchCenter.value = getCenter(e.touches[0], e.touches[1])
+        lastTouchDistance.value = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
+        lastTouchCenter.value = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
     } else if (e.touches.length === 1 && activeTool.value === 'hand') {
-        const touch = e.touches[0]
+        const touch = e.touches[0] as Touch
         lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
     } else {
         handleCanvasClick(e)
@@ -78,7 +78,7 @@ const handleTouchMove = (e: TouchEvent) => {
         e.preventDefault() // Prevent page scroll (important) via CSS too if needed
 
         // Pinch Zoom
-        const dist = getDistance(e.touches[0], e.touches[1])
+        const dist = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
         if (lastTouchDistance.value) {
             const zoomDelta = dist / lastTouchDistance.value
             manualScale.value = Math.min(Math.max(manualScale.value * zoomDelta, 0.2), 5)
@@ -86,7 +86,7 @@ const handleTouchMove = (e: TouchEvent) => {
         lastTouchDistance.value = dist
 
         // Two-Finger Pan
-        const center = getCenter(e.touches[0], e.touches[1])
+        const center = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
         if (lastTouchCenter.value) {
             const dx = center.x - lastTouchCenter.value.x
             const dy = center.y - lastTouchCenter.value.y
@@ -95,7 +95,7 @@ const handleTouchMove = (e: TouchEvent) => {
         lastTouchCenter.value = center
     } else if (e.touches.length === 1 && activeTool.value === 'hand' && lastSingleTouch.value) {
         e.preventDefault()
-        const touch = e.touches[0]
+        const touch = e.touches[0] as Touch
         const dx = touch.clientX - lastSingleTouch.value.x
         const dy = touch.clientY - lastSingleTouch.value.y
         panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }

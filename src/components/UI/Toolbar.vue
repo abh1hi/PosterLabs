@@ -9,7 +9,7 @@ import { useTemplates } from '../../composables/useTemplates'
 import ProfilePanel from './ProfilePanel.vue'
 import { 
   ImageIcon, Shapes, MousePointer2, Hand,
-  Search, LayoutTemplate, History, Shuffle,
+  Search, LayoutTemplate, History,
   ChevronDown, ChevronRight, ChevronUp, Smartphone,
   Eye, EyeOff, Lock, Unlock, ArrowUpToLine, ArrowDownToLine,
   Palette, Maximize2, Trash2, Copy,
@@ -43,7 +43,7 @@ const { uploads, isUploading, uploadImage, saveExternalMedia, fetchUserMedia } =
 const { THEMES } = useThemes()
 const { TEMPLATES } = useTemplates()
 const { projects, saveProject, loadProject, deleteProject, createNewProject } = useProjects()
-const { installedFonts, googleFonts, isGoogleFontsActive, searchQuery, filteredFonts, queryLocalFonts, applyFont, isLoadingFonts, addFontFromUrl } = useFonts()
+const { isGoogleFontsActive, searchQuery, filteredFonts, queryLocalFonts, applyFont, isLoadingFonts, addFontFromUrl } = useFonts()
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const BLEND_MODES = [
@@ -123,6 +123,24 @@ const addTextHeader = () => {
   })
 }
 
+const addTextSubheading = () => {
+    handleAddElement({
+      type: 'text',
+      content: 'Add a subheading',
+      x: 100,
+      y: 150,
+      style: {
+        fontSize: 32,
+        fontFamily: 'Roboto, sans-serif',
+        fontWeight: '600',
+        color: '#1d1b20',
+        textAlign: 'center',
+        opacity: 1,
+        rotate: 0
+      }
+    })
+}
+
 const addTextBody = () => {
     handleAddElement({
       type: 'text',
@@ -132,12 +150,56 @@ const addTextBody = () => {
       style: {
         fontSize: 16,
         fontFamily: 'Roboto, sans-serif',
-        color: '#333333',
+        color: '#49454f',
         textAlign: 'center',
         opacity: 1,
         rotate: 0
       }
     })
+}
+
+const addTextCaption = () => {
+    handleAddElement({
+      type: 'text',
+      content: 'ADD A CAPTION',
+      x: 100,
+      y: 250,
+      style: {
+        fontSize: 12,
+        fontFamily: 'Roboto, sans-serif',
+        fontWeight: '500',
+        color: '#49454f',
+        textAlign: 'center',
+        opacity: 1,
+        rotate: 0,
+        letterSpacing: 1.5,
+        textTransform: 'uppercase'
+      }
+    })
+}
+
+const addTextCreative = () => {
+    handleAddElement({
+      type: 'text',
+      content: 'Creative Text',
+      x: 100,
+      y: 300,
+      style: {
+        fontSize: 64,
+        fontFamily: 'Lobster, cursive',
+        color: '#6750a4',
+        textAlign: 'center',
+        opacity: 1,
+        rotate: -5,
+        shadow: {
+            blur: 10,
+            color: 'rgba(0,0,0,0.2)',
+            offsetX: 4,
+            offsetY: 4
+        }
+      }
+    })
+    isGoogleFontsActive.value = true
 }
 
 const handleImageUpload = async (e: Event) => {
@@ -243,7 +305,7 @@ const handleAddFontFromUrl = () => {
         const family = addFontFromUrl(url)
         if (family) {
             isGoogleFontsActive.value = true
-            handleInput(selectedId.value, 'fontFamily', family, true)
+            handleInput(selectedId.value!, 'fontFamily', family, true)
         }
     }
 }
@@ -251,6 +313,16 @@ const handleAddFontFromUrl = () => {
 const handleSaveProject = () => {
     const name = window.prompt('Enter project name:', 'My Awesome Poster');
     if (name) saveProject(name);
+}
+
+const applyTemplate = (template: any) => {
+    if (window.confirm('Replace current design with template?')) {
+        elements.value = JSON.parse(JSON.stringify(template.elements));
+        posterSize.value.w = template.settings.w;
+        posterSize.value.h = template.settings.h;
+        bgColor.value = template.settings.bgColor;
+        showToast('Template loaded', 'success');
+    }
 }
 
 onMounted(() => {
@@ -277,7 +349,6 @@ const initTui = async () => {
         const container = document.querySelector('#tui-image-editor-container')
         if (container) {
             tuiInstance.value = new ImageEditor(container, {
-                includeUI: false, // Custom UI
                 cssMaxWidth: 300,
                 cssMaxHeight: 250,
                 selectionStyle: {
@@ -287,7 +358,8 @@ const initTui = async () => {
             })
             
             // Load Image
-            tuiInstance.value.loadImageFromURL(selectedElement.value.src, 'Current Image').then(() => {
+            const src = selectedElement.value!.src
+            tuiInstance.value.loadImageFromURL(src, 'Current Image').then(() => {
                 // Clear filters (TUI should start fresh or we could try to apply them?)
                 tuiInstance.value.clearUndoStack()
                 isTuiLoading.value = false
@@ -328,7 +400,7 @@ const applyTuiFilter = (filterType: string) => {
     }
 
     // TUI API: applyFilter(type, options, isUndoable)
-    tuiInstance.value.applyFilter(filterName, options).then((result: any) => {
+    tuiInstance.value.applyFilter(filterName, options).then(() => {
         console.log('Filter applied:', filterName)
     }).catch((e: any) => {
         console.warn('Filter failed:', e)
@@ -353,9 +425,9 @@ const saveTuiForReal = async () => {
         const mediaDoc = await uploadImage(file)
         if (selectedId.value) {
             updateElement(selectedId.value, { 
-                src: mediaDoc.url,
-                // Reset CSS filters as they are likely baked in now, or user kept them? 
-                // Let's reset common ones to avoid double effort
+                src: mediaDoc.url
+            })
+            updateStyle(selectedId.value, {
                 brightness: 100, contrast: 100, blur: 0, grayscale: 0, sepia: 0, invert: 0
             })
             showToast('Advanced edits saved', 'success')
@@ -532,15 +604,7 @@ const saveInlineCrop = async () => {
                <h3 class="label-large text-on-surface-variant uppercase tracking-widest px-2">Templates</h3>
                <div class="grid grid-cols-2 gap-3">
                   <button v-for="template in TEMPLATES" :key="template.id"
-                      @click="() => {
-                          if(confirm('Replace current design with template?')) {
-                              elements.value = JSON.parse(JSON.stringify(template.elements));
-                              posterSize.w = template.settings.w;
-                              posterSize.h = template.settings.h;
-                              bgColor = template.settings.bgColor;
-                              showToast('Template loaded', 'success');
-                          }
-                      }" 
+                       @click="applyTemplate(template)" 
                       class="aspect-[3/4] bg-surface-high rounded-xl border border-outline/10 hover:border-primary transition-all cursor-pointer overflow-hidden group relative"
                   >
                       <!-- Simple Preview (Background Color + Name) -->
@@ -606,12 +670,23 @@ const saveInlineCrop = async () => {
         <div v-if="activeTab === 'text'" class="p-4 space-y-6">
             <div class="space-y-4">
                <h3 class="label-large text-on-surface-variant uppercase tracking-widest px-2">Text Styles</h3>
-               <button @click="addTextHeader" class="w-full p-4 rounded-2xl bg-surface-high hover:bg-primary-container text-left transition-colors border border-outline/5">
-                  <span class="headline-small block">Add a heading</span>
-               </button>
-               <button @click="addTextBody" class="w-full p-4 rounded-2xl bg-surface-high hover:bg-primary-container text-left transition-colors border border-outline/5">
-                  <span class="body-medium block">Add a body text</span>
-               </button>
+                <button @click="addTextHeader" class="w-full p-4 rounded-2xl bg-surface-high hover:bg-primary-container text-left transition-colors border border-outline/5">
+                   <span class="headline-small block text-on-surface">Add a heading</span>
+                </button>
+                <button @click="addTextSubheading" class="w-full p-4 rounded-2xl bg-surface-high hover:bg-primary-container text-left transition-colors border border-outline/5">
+                   <span class="title-large block text-on-surface">Add a subheading</span>
+                </button>
+                <button @click="addTextBody" class="w-full p-4 rounded-2xl bg-surface-high hover:bg-primary-container text-left transition-colors border border-outline/5">
+                   <span class="body-large block text-on-surface-variant">Add a body text</span>
+                </button>
+                <button @click="addTextCaption" class="w-full p-4 rounded-2xl bg-surface-high hover:bg-primary-container text-left transition-colors border border-outline/5">
+                   <span class="label-large block text-on-surface-variant uppercase tracking-widest">Add a caption</span>
+                </button>
+                <div class="h-px bg-outline/10 my-2"></div>
+                <button @click="addTextCreative" class="w-full p-6 rounded-2xl bg-primary-container/20 hover:bg-primary-container/40 text-center transition-all border border-primary/20 group overflow-hidden relative">
+                   <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                   <span class="headline-medium block text-primary italic font-serif relative z-10">Creative Text</span>
+                </button>
             </div>
         </div>
 
@@ -627,8 +702,8 @@ const saveInlineCrop = async () => {
                     <div v-if="openSections.content" class="px-4 pb-4">
                         <textarea 
                             class="w-full h-24 p-3 rounded-xl bg-surface-high border border-outline/10 focus:border-primary outline-none resize-none text-sm transition-colors"
-                            :value="selectedElement.content"
-                            @input="(e: any) => handleInput(selectedId, 'content', e.target.value)"
+                            :value="selectedElement!.content"
+                            @input="(e: any) => handleInput(selectedId!, 'content', e.target.value)"
                             placeholder="Type your text here..."
                         ></textarea>
                     </div>
@@ -682,10 +757,10 @@ const saveInlineCrop = async () => {
                                     :key="font.family"
                                     @click="() => {
                                         applyFont(font);
-                                        handleInput(selectedId, 'fontFamily', font.family, true);
+                                        handleInput(selectedId!, 'fontFamily', font.family, true);
                                     }"
                                     class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-surface-variant flex items-center justify-between group"
-                                    :class="{'bg-primary-container text-on-primary-container': selectedElement.style.fontFamily === font.family}"
+                                    :class="{'bg-primary-container text-on-primary-container': selectedElement!.style.fontFamily === font.family}"
                                 >
                                     <span :style="{ fontFamily: font.family }">{{ font.family }}</span>
                                     <span v-if="font.category === 'google'" class="text-[10px] uppercase font-bold opacity-50"><Globe :size="10" /></span>
@@ -701,48 +776,48 @@ const saveInlineCrop = async () => {
 
                         <!-- Size & Line Height -->
                         <div class="grid grid-cols-2 gap-2">
-                            <md-filled-text-field label="Size" type="number" :value="String(selectedElement.style.fontSize || 16)" @input="(e: any) => handleInput(selectedId, 'fontSize', parseInt(e.target.value), true)"></md-filled-text-field>
-                            <md-filled-text-field label="Line Height" type="number" step="0.1" :value="String(selectedElement.style.lineHeight || 1.2)" @input="(e: any) => handleInput(selectedId, 'lineHeight', parseFloat(e.target.value), true)"></md-filled-text-field>
+                            <md-filled-text-field label="Size" type="number" :value="String(selectedElement!.style.fontSize || 16)" @input="(e: any) => handleInput(selectedId!, 'fontSize', parseInt(e.target.value), true)"></md-filled-text-field>
+                            <md-filled-text-field label="Line Height" type="number" step="0.1" :value="String(selectedElement!.style.lineHeight || 1.2)" @input="(e: any) => handleInput(selectedId!, 'lineHeight', parseFloat(e.target.value), true)"></md-filled-text-field>
                         </div>
 
                         <!-- Alignment -->
                         <div class="flex bg-surface-high rounded-lg p-1">
-                            <button v-for="align in ['left', 'center', 'right']" :key="align" @click="handleInput(selectedId, 'textAlign', align, true)" 
-                                class="flex-1 py-2 rounded-md hover:bg-surface-variant transition-colors" :class="{'bg-primary-container text-on-primary-container': selectedElement.style.textAlign === align}">
+                            <button v-for="align in ['left', 'center', 'right']" :key="align" @click="handleInput(selectedId!, 'textAlign', align, true)" 
+                                class="flex-1 py-2 rounded-md hover:bg-surface-variant transition-colors" :class="{'bg-primary-container text-on-primary-container': selectedElement!.style.textAlign === align}">
                                 <div class="capitalize text-xs">{{ align }}</div>
                             </button>
                         </div>
 
                         <!-- Style Toggles (Bold, Italic, Upper, Lower, Underline) -->
                         <div class="flex flex-wrap gap-2">
-                             <button @click="handleInput(selectedId, 'fontWeight', selectedElement.style.fontWeight === 'bold' ? 'normal' : 'bold', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant" :class="{'bg-primary-container': selectedElement.style.fontWeight === 'bold'}">B</button>
-                             <button @click="handleInput(selectedId, 'fontStyle', selectedElement.style.fontStyle === 'italic' ? 'normal' : 'italic', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant italic" :class="{'bg-primary-container': selectedElement.style.fontStyle === 'italic'}">I</button>
-                             <button @click="handleInput(selectedId, 'textDecoration', selectedElement.style.textDecoration === 'underline' ? 'none' : 'underline', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant underline" :class="{'bg-primary-container': selectedElement.style.textDecoration === 'underline'}">U</button>
-                             <button @click="handleInput(selectedId, 'textTransform', selectedElement.style.textTransform === 'uppercase' ? 'none' : 'uppercase', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant" :class="{'bg-primary-container': selectedElement.style.textTransform === 'uppercase'}">TT</button>
+                             <button @click="handleInput(selectedId!, 'fontWeight', selectedElement!.style.fontWeight === 'bold' ? 'normal' : 'bold', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant" :class="{'bg-primary-container': selectedElement!.style.fontWeight === 'bold'}">B</button>
+                             <button @click="handleInput(selectedId!, 'fontStyle', selectedElement!.style.fontStyle === 'italic' ? 'normal' : 'italic', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant italic" :class="{'bg-primary-container': selectedElement!.style.fontStyle === 'italic'}">I</button>
+                             <button @click="handleInput(selectedId!, 'textDecoration', selectedElement!.style.textDecoration === 'underline' ? 'none' : 'underline', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant underline" :class="{'bg-primary-container': selectedElement!.style.textDecoration === 'underline'}">U</button>
+                             <button @click="handleInput(selectedId!, 'textTransform', selectedElement!.style.textTransform === 'uppercase' ? 'none' : 'uppercase', true)" class="w-10 h-10 rounded-lg border border-outline/10 flex items-center justify-center hover:bg-surface-variant" :class="{'bg-primary-container': selectedElement!.style.textTransform === 'uppercase'}">TT</button>
                         </div>
 
                         <!-- Color -->
                         <div class="flex items-center justify-between p-2 bg-surface-high rounded-xl">
                             <span class="label-medium">Color</span>
                             <div class="flex items-center gap-2">
-                                <span class="font-mono text-xs uppercase">{{ selectedElement.style.color }}</span>
-                                <input type="color" :value="selectedElement.style.color || '#000000'" @input="(e: any) => handleInput(selectedId, 'color', e.target.value, true)" class="w-8 h-8 rounded-full border-none p-0 cursor-pointer" />
+                                <span class="font-mono text-xs uppercase">{{ selectedElement!.style.color }}</span>
+                                <input type="color" :value="selectedElement!.style.color || '#000000'" @input="(e: any) => handleInput(selectedId!, 'color', e.target.value, true)" class="w-8 h-8 rounded-full border-none p-0 cursor-pointer" />
                             </div>
                         </div>
 
                         <!-- Letter Spacing -->
-                         <div class="space-y-1">
-                            <div class="flex justify-between"><span class="label-small">Letter Spacing</span><span class="label-small">{{ selectedElement.style.letterSpacing || 0 }}px</span></div>
-                            <md-slider min="-5" max="20" with-tick-marks :value="parseInt(selectedElement.style.letterSpacing || '0')" @input="(e: any) => handleInput(selectedId, 'letterSpacing', e.target.value, true)"></md-slider>
-                         </div>
+                          <div class="space-y-1">
+                             <div class="flex justify-between"><span class="label-small">Letter Spacing</span><span class="label-small">{{ selectedElement!.style.letterSpacing || 0 }}px</span></div>
+                             <md-slider min="-5" max="20" with-tick-marks :value="parseInt(String(selectedElement!.style.letterSpacing || '0'))" @input="(e: any) => handleInput(selectedId!, 'letterSpacing', parseFloat(e.target.value), true)"></md-slider>
+                          </div>
 
                          <!-- Stroke (Outline) -->
                          <div class="space-y-2 pt-2 border-t border-outline/10">
                             <div class="flex items-center justify-between">
                                 <span class="label-medium">Stroke</span>
-                                <div class="flex items-center gap-2">
-                                    <input type="color" :value="selectedElement.style.webkitTextStrokeColor || '#000000'" @input="(e: any) => handleInput(selectedId, 'webkitTextStrokeColor', e.target.value, true)" class="w-6 h-6 rounded bg-transparent" />
-                                    <input type="number" class="w-12 h-8 rounded bg-surface-variant px-1 text-center text-sm" :value="selectedElement.style.webkitTextStrokeWidth || 0" @input="(e: any) => handleInput(selectedId, 'webkitTextStrokeWidth', parseFloat(e.target.value), true)" />
+                                 <div class="flex items-center gap-2">
+                                    <input type="color" :value="selectedElement!.style.webkitTextStrokeColor || '#000000'" @input="(e: any) => handleInput(selectedId!, 'webkitTextStrokeColor', e.target.value, true)" class="w-6 h-6 rounded bg-transparent" />
+                                    <input type="number" class="w-12 h-8 rounded bg-surface-variant px-1 text-center text-sm" :value="selectedElement!.style.webkitTextStrokeWidth || 0" @input="(e: any) => handleInput(selectedId!, 'webkitTextStrokeWidth', parseFloat(e.target.value), true)" />
                                     <span class="text-xs">px</span>
                                 </div>
                             </div>
@@ -752,21 +827,21 @@ const saveInlineCrop = async () => {
                          <div class="space-y-2 pt-2 border-t border-outline/10">
                             <div class="flex items-center justify-between">
                                 <span class="label-medium">Shadow</span>
-                                <div class="flex items-center gap-2">
-                                     <md-switch :selected="!!selectedElement.style.shadow" @change="(e: any) => {
-                                         if (e.target.selected) handleInput(selectedId, 'shadow', { color: '#000000', blur: 4, offsetX: 2, offsetY: 2 }, true);
-                                         else handleInput(selectedId, 'shadow', undefined, true);
-                                     }"></md-switch>
-                                </div>
+                                 <div class="flex items-center gap-2">
+                                      <md-switch :selected="!!selectedElement!.style.shadow" @change="(e: any) => {
+                                          if (e.target.selected) handleInput(selectedId!, 'shadow', { color: '#000000', blur: 4, offsetX: 2, offsetY: 2 }, true);
+                                          else handleInput(selectedId!, 'shadow', undefined, true);
+                                      }"></md-switch>
+                                 </div>
                             </div>
-                            <div v-if="selectedElement.style.shadow" class="grid grid-cols-2 gap-2">
+                            <div v-if="selectedElement!.style.shadow" class="grid grid-cols-2 gap-2">
                                 <div class="col-span-2 flex items-center justify-between bg-surface-high p-2 rounded-lg">
                                     <span class="text-xs">Color</span>
-                                    <input type="color" :value="selectedElement.style.shadow.color" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, color: e.target.value }, true)" class="w-6 h-6 rounded bg-transparent" />
+                                    <input type="color" :value="selectedElement!.style.shadow.color" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, color: e.target.value }, true)" class="w-6 h-6 rounded bg-transparent" />
                                 </div>
-                                <md-filled-text-field label="X" type="number" :value="String(selectedElement.style.shadow.offsetX)" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, offsetX: parseFloat(e.target.value) }, true)"></md-filled-text-field>
-                                <md-filled-text-field label="Y" type="number" :value="String(selectedElement.style.shadow.offsetY)" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, offsetY: parseFloat(e.target.value) }, true)"></md-filled-text-field>
-                                <md-filled-text-field label="Blur" type="number" class="col-span-2" :value="String(selectedElement.style.shadow.blur)" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, blur: parseFloat(e.target.value) }, true)"></md-filled-text-field>
+                                <md-filled-text-field label="X" type="number" :value="String(selectedElement!.style.shadow.offsetX)" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, offsetX: parseFloat(e.target.value) }, true)"></md-filled-text-field>
+                                <md-filled-text-field label="Y" type="number" :value="String(selectedElement!.style.shadow.offsetY)" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, offsetY: parseFloat(e.target.value) }, true)"></md-filled-text-field>
+                                <md-filled-text-field label="Blur" type="number" class="col-span-2" :value="String(selectedElement!.style.shadow.blur)" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, blur: parseFloat(e.target.value) }, true)"></md-filled-text-field>
                             </div>
                          </div>
 
@@ -780,10 +855,10 @@ const saveInlineCrop = async () => {
                         <ChevronDown v-if="openSections.transform" :size="16" /><ChevronRight v-else :size="16" />
                     </button>
                     <div v-if="openSections.transform" class="grid grid-cols-2 gap-2 px-4 pb-4">
-                        <md-filled-text-field label="X" type="number" :value="String(Math.round(selectedElement.x))" @input="(e: any) => handleInput(selectedId, 'x', parseInt(e.target.value) || 0)"></md-filled-text-field>
-                        <md-filled-text-field label="Y" type="number" :value="String(Math.round(selectedElement.y))" @input="(e: any) => handleInput(selectedId, 'y', parseInt(e.target.value) || 0)"></md-filled-text-field>
-                        <md-filled-text-field label="Rotate" type="number" :value="String(Math.round(selectedElement.style.rotate || 0))" @input="(e: any) => handleInput(selectedId, 'rotate', parseInt(e.target.value) || 0, true)"></md-filled-text-field>
-                        <md-filled-text-field label="Opacity" type="number" step="0.1" :value="String(selectedElement.style.opacity ?? 1)" @input="(e: any) => handleInput(selectedId, 'opacity', parseFloat(e.target.value) || 1, true)"></md-filled-text-field>
+                        <md-filled-text-field label="X" type="number" :value="String(Math.round(selectedElement!.x))" @input="(e: any) => handleInput(selectedId!, 'x', parseInt(e.target.value) || 0)"></md-filled-text-field>
+                        <md-filled-text-field label="Y" type="number" :value="String(Math.round(selectedElement!.y))" @input="(e: any) => handleInput(selectedId!, 'y', parseInt(e.target.value) || 0)"></md-filled-text-field>
+                        <md-filled-text-field label="Rotate" type="number" :value="String(Math.round(selectedElement!.style.rotate || 0))" @input="(e: any) => handleInput(selectedId!, 'rotate', parseInt(e.target.value) || 0, true)"></md-filled-text-field>
+                        <md-filled-text-field label="Opacity" type="number" step="0.1" :value="String(selectedElement!.style.opacity ?? 1)" @input="(e: any) => handleInput(selectedId!, 'opacity', parseFloat(e.target.value) || 1, true)"></md-filled-text-field>
                     </div>
                 </div>
 
@@ -798,10 +873,10 @@ const saveInlineCrop = async () => {
                         <div v-if="isCropping" class="flex flex-col gap-3">
                              <div class="h-64 bg-black/50 rounded-lg overflow-hidden relative">
                                 <Cropper
-                                    v-if="selectedElement.src"
+                                    v-if="selectedElement!.src"
                                     ref="cropperRef"
                                     class="cropper"
-                                    :src="selectedElement.src"
+                                    :src="selectedElement!.src"
                                     :stencil-props="{ aspectRatio: 0 }" 
                                 />
                              </div>
@@ -852,40 +927,40 @@ const saveInlineCrop = async () => {
                                 <h4 class="label-small uppercase text-on-surface-variant font-bold">Adjustments</h4>
                                  
                                  <div class="space-y-1">
-                                    <div class="flex justify-between"><span class="label-small">Brightness</span><span class="label-small">{{ selectedElement.style.brightness || 100 }}%</span></div>
-                                    <md-slider min="0" max="200" with-tick-marks :value="selectedElement.style.brightness || 100" @input="(e: any) => handleInput(selectedId, 'brightness', e.target.value, true)"></md-slider>
+                                    <div class="flex justify-between"><span class="label-small">Brightness</span><span class="label-small">{{ selectedElement!.style.brightness || 100 }}%</span></div>
+                                    <md-slider min="0" max="200" with-tick-marks :value="selectedElement!.style.brightness || 100" @input="(e: any) => handleInput(selectedId!, 'brightness', e.target.value, true)"></md-slider>
                                  </div>
                                  <div class="space-y-1">
-                                    <div class="flex justify-between"><span class="label-small">Contrast</span><span class="label-small">{{ selectedElement.style.contrast || 100 }}%</span></div>
-                                    <md-slider min="0" max="200" with-tick-marks :value="selectedElement.style.contrast || 100" @input="(e: any) => handleInput(selectedId, 'contrast', e.target.value, true)"></md-slider>
+                                    <div class="flex justify-between"><span class="label-small">Contrast</span><span class="label-small">{{ selectedElement!.style.contrast || 100 }}%</span></div>
+                                    <md-slider min="0" max="200" with-tick-marks :value="selectedElement!.style.contrast || 100" @input="(e: any) => handleInput(selectedId!, 'contrast', e.target.value, true)"></md-slider>
                                  </div>
                                  <div class="space-y-1">
-                                    <div class="flex justify-between"><span class="label-small">Saturation</span><span class="label-small">{{ selectedElement.style.saturate || 100 }}%</span></div>
-                                    <md-slider min="0" max="200" with-tick-marks :value="selectedElement.style.saturate || 100" @input="(e: any) => handleInput(selectedId, 'saturate', e.target.value, true)"></md-slider>
+                                    <div class="flex justify-between"><span class="label-small">Saturation</span><span class="label-small">{{ selectedElement!.style.saturate || 100 }}%</span></div>
+                                    <md-slider min="0" max="200" with-tick-marks :value="selectedElement!.style.saturate || 100" @input="(e: any) => handleInput(selectedId!, 'saturate', e.target.value, true)"></md-slider>
                                  </div>
                                  
                                  <div class="grid grid-cols-2 gap-3 pt-2">
                                      <div class="space-y-1">
-                                        <div class="flex justify-between"><span class="label-small">Blur</span><span class="label-small">{{ selectedElement.style.blur || 0 }}px</span></div>
-                                        <md-slider min="0" max="20" :value="selectedElement.style.blur || 0" @input="(e: any) => handleInput(selectedId, 'blur', e.target.value, true)"></md-slider>
+                                        <div class="flex justify-between"><span class="label-small">Blur</span><span class="label-small">{{ selectedElement!.style.blur || 0 }}px</span></div>
+                                        <md-slider min="0" max="20" :value="selectedElement!.style.blur || 0" @input="(e: any) => handleInput(selectedId!, 'blur', e.target.value, true)"></md-slider>
                                      </div>
                                      <div class="space-y-1">
-                                        <div class="flex justify-between"><span class="label-small">Sepia</span><span class="label-small">{{ selectedElement.style.sepia || 0 }}%</span></div>
-                                        <md-slider min="0" max="100" :value="selectedElement.style.sepia || 0" @input="(e: any) => handleInput(selectedId, 'sepia', e.target.value, true)"></md-slider>
+                                        <div class="flex justify-between"><span class="label-small">Sepia</span><span class="label-small">{{ selectedElement!.style.sepia || 0 }}%</span></div>
+                                        <md-slider min="0" max="100" :value="selectedElement!.style.sepia || 0" @input="(e: any) => handleInput(selectedId!, 'sepia', e.target.value, true)"></md-slider>
                                      </div>
                                      <div class="space-y-1">
-                                        <div class="flex justify-between"><span class="label-small">Grayscale</span><span class="label-small">{{ selectedElement.style.grayscale || 0 }}%</span></div>
-                                        <md-slider min="0" max="100" :value="selectedElement.style.grayscale || 0" @input="(e: any) => handleInput(selectedId, 'grayscale', e.target.value, true)"></md-slider>
+                                        <div class="flex justify-between"><span class="label-small">Grayscale</span><span class="label-small">{{ selectedElement!.style.grayscale || 0 }}%</span></div>
+                                        <md-slider min="0" max="100" :value="selectedElement!.style.grayscale || 0" @input="(e: any) => handleInput(selectedId!, 'grayscale', e.target.value, true)"></md-slider>
                                      </div>
                                      <div class="space-y-1">
-                                        <div class="flex justify-between"><span class="label-small">Invert</span><span class="label-small">{{ selectedElement.style.invert || 0 }}%</span></div>
-                                        <md-slider min="0" max="100" :value="selectedElement.style.invert || 0" @input="(e: any) => handleInput(selectedId, 'invert', e.target.value, true)"></md-slider>
+                                        <div class="flex justify-between"><span class="label-small">Invert</span><span class="label-small">{{ selectedElement!.style.invert || 0 }}%</span></div>
+                                        <md-slider min="0" max="100" :value="selectedElement!.style.invert || 0" @input="(e: any) => handleInput(selectedId!, 'invert', e.target.value, true)"></md-slider>
                                      </div>
                                  </div>
 
                                  <div class="space-y-1 pt-2">
-                                    <div class="flex justify-between"><span class="label-small">Hue Rotate</span><span class="label-small">{{ selectedElement.style.hueRotate || 0 }}deg</span></div>
-                                    <md-slider min="0" max="360" :value="selectedElement.style.hueRotate || 0" @input="(e: any) => handleInput(selectedId, 'hueRotate', e.target.value, true)"></md-slider>
+                                    <div class="flex justify-between"><span class="label-small">Hue Rotate</span><span class="label-small">{{ selectedElement!.style.hueRotate || 0 }}deg</span></div>
+                                    <md-slider min="0" max="360" :value="selectedElement!.style.hueRotate || 0" @input="(e: any) => handleInput(selectedId!, 'hueRotate', e.target.value, true)"></md-slider>
                                  </div>
                              </div>
                         
@@ -893,8 +968,8 @@ const saveInlineCrop = async () => {
                             <div class="space-y-2 pt-2 border-t border-outline/10">
                                 <span class="label-medium">Transform</span>
                                 <div class="flex gap-2">
-                                    <button @click="handleInput(selectedId, 'flipX', !selectedElement.style.flipX, true)" class="flex-1 py-2 rounded-lg border border-outline/20 hover:bg-primary-container hover:border-primary transition-colors" :class="{'bg-primary-container border-primary': selectedElement.style.flipX}">Flip H</button>
-                                    <button @click="handleInput(selectedId, 'flipY', !selectedElement.style.flipY, true)" class="flex-1 py-2 rounded-lg border border-outline/20 hover:bg-primary-container hover:border-primary transition-colors" :class="{'bg-primary-container border-primary': selectedElement.style.flipY}">Flip V</button>
+                                    <button @click="handleInput(selectedId!, 'flipX', !selectedElement!.style.flipX, true)" class="flex-1 py-2 rounded-lg border border-outline/20 hover:bg-primary-container hover:border-primary transition-colors" :class="{'bg-primary-container border-primary': selectedElement!.style.flipX}">Flip H</button>
+                                    <button @click="handleInput(selectedId!, 'flipY', !selectedElement!.style.flipY, true)" class="flex-1 py-2 rounded-lg border border-outline/20 hover:bg-primary-container hover:border-primary transition-colors" :class="{'bg-primary-container border-primary': selectedElement!.style.flipY}">Flip V</button>
                                 </div>
                             </div>
                         </div>
@@ -912,9 +987,9 @@ const saveInlineCrop = async () => {
                              <h4 class="label-small uppercase text-on-surface-variant font-bold">Shape Type</h4>
                              <div class="grid grid-cols-3 gap-2">
                                  <button v-for="type in ['rectangle', 'circle', 'triangle']" :key="type" 
-                                     @click="handleInput(selectedId, 'shapeType', type, true)"
+                                     @click="handleInput(selectedId!, 'shapeType', type, true)"
                                      class="py-2 rounded-lg border transition-all text-sm capitalize"
-                                     :class="selectedElement.style.shapeType === type ? 'bg-primary-container border-primary text-on-primary-container font-bold' : 'bg-surface-high border-outline/10'"
+                                     :class="selectedElement!.style.shapeType === type ? 'bg-primary-container border-primary text-on-primary-container font-bold' : 'bg-surface-high border-outline/10'"
                                  >
                                      {{ type }}
                                  </button>
@@ -924,17 +999,17 @@ const saveInlineCrop = async () => {
                         <div class="space-y-2 pt-2 border-t border-outline/10">
                             <h4 class="label-small uppercase text-on-surface-variant font-bold">Background</h4>
                             <div class="flex items-center gap-3 p-3 bg-surface-high rounded-xl border border-outline/10">
-                                <input type="color" :value="selectedElement.style.backgroundColor || '#0061a4'" @input="(e: any) => handleInput(selectedId, 'backgroundColor', e.target.value, true)" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none p-0" />
-                                <span class="label-medium font-mono uppercase">{{ selectedElement.style.backgroundColor || '#0061a4' }}</span>
+                                <input type="color" :value="selectedElement!.style.backgroundColor || '#0061a4'" @input="(e: any) => handleInput(selectedId!, 'backgroundColor', e.target.value, true)" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none p-0" />
+                                <span class="label-medium font-mono uppercase">{{ selectedElement!.style.backgroundColor || '#0061a4' }}</span>
                             </div>
                         </div>
 
-                         <div class="space-y-2 pt-2 border-t border-outline/10" v-if="selectedElement.style.shapeType !== 'circle'">
+                         <div class="space-y-2 pt-2 border-t border-outline/10" v-if="selectedElement!.style.shapeType !== 'circle'">
                             <div class="flex justify-between items-center">
                                 <h4 class="label-small uppercase text-on-surface-variant font-bold">Corner Radius</h4>
-                                <span class="label-small">{{ parseInt(String(selectedElement.style.borderRadius || 0)) }}px</span>
+                                <span class="label-small">{{ parseInt(String(selectedElement!.style.borderRadius || 0)) }}px</span>
                             </div>
-                            <md-slider min="0" max="200" :value="parseInt(String(selectedElement.style.borderRadius || 0))" @input="(e: any) => handleInput(selectedId, 'borderRadius', e.target.value, true)"></md-slider>
+                            <md-slider min="0" max="200" :value="parseInt(String(selectedElement!.style.borderRadius || 0))" @input="(e: any) => handleInput(selectedId!, 'borderRadius', e.target.value, true)"></md-slider>
                          </div>
                     </div>
                 </div>
@@ -948,19 +1023,19 @@ const saveInlineCrop = async () => {
                     <div v-if="openSections.appearance" class="space-y-4 px-4 pb-4">
                         <!-- Shape Background -->
                         <div v-if="selectedElement.type === 'shape'" class="flex items-center gap-2 p-2 bg-surface-high rounded-xl">
-                            <input type="color" :value="selectedElement.style.backgroundColor" @input="(e: any) => handleInput(selectedId, 'backgroundColor', e.target.value, true)" class="w-8 h-8 rounded-md bg-transparent" />
-                            <span class="label-small uppercase font-mono">{{ selectedElement.style.backgroundColor }}</span>
+                            <input type="color" :value="selectedElement!.style.backgroundColor" @input="(e: any) => handleInput(selectedId!, 'backgroundColor', e.target.value, true)" class="w-8 h-8 rounded-md bg-transparent" />
+                            <span class="label-small uppercase font-mono">{{ selectedElement!.style.backgroundColor }}</span>
                         </div>
                         
                         <!-- Blend Mode -->
-                        <md-outlined-select label="Blend" class="w-full" :value="selectedElement.style.mixBlendMode || 'normal'" @change="(e: any) => handleInput(selectedId, 'mixBlendMode', e.target.value, true)">
+                        <md-outlined-select label="Blend" class="w-full" :value="selectedElement!.style.mixBlendMode || 'normal'" @change="(e: any) => handleInput(selectedId!, 'mixBlendMode', e.target.value, true)">
                             <md-select-option v-for="m in BLEND_MODES" :key="m" :value="m"><div slot="headline">{{ m }}</div></md-select-option>
                         </md-outlined-select>
 
                         <!-- Border Radius (Images/Shapes) -->
                          <div class="space-y-1">
-                            <div class="flex justify-between"><span class="label-small">Corner Radius</span><span class="label-small">{{ parseInt(String(selectedElement.style.borderRadius || 0)) }}px</span></div>
-                            <md-slider min="0" max="200" :value="parseInt(String(selectedElement.style.borderRadius || 0))" @input="(e: any) => handleInput(selectedId, 'borderRadius', e.target.value, true)"></md-slider>
+                            <div class="flex justify-between"><span class="label-small">Corner Radius</span><span class="label-small">{{ parseInt(String(selectedElement!.style.borderRadius || 0)) }}px</span></div>
+                            <md-slider min="0" max="200" :value="parseInt(String(selectedElement!.style.borderRadius || 0))" @input="(e: any) => handleInput(selectedId!, 'borderRadius', e.target.value, true)"></md-slider>
                          </div>
 
                          <!-- Border (Stroke) -->
@@ -968,8 +1043,8 @@ const saveInlineCrop = async () => {
                             <div class="flex items-center justify-between">
                                 <span class="label-medium">Border</span>
                                 <div class="flex items-center gap-2">
-                                    <input type="color" :value="selectedElement.style.borderColor || '#000000'" @input="(e: any) => handleInput(selectedId, 'borderColor', e.target.value, true)" class="w-6 h-6 rounded bg-transparent" />
-                                    <input type="number" class="w-12 h-8 rounded bg-surface-variant px-1 text-center text-sm" :value="selectedElement.style.borderWidth || 0" @input="(e: any) => handleInput(selectedId, 'borderWidth', parseFloat(e.target.value), true)" />
+                                    <input type="color" :value="selectedElement!.style.borderColor || '#000000'" @input="(e: any) => handleInput(selectedId!, 'borderColor', e.target.value, true)" class="w-6 h-6 rounded bg-transparent" />
+                                    <input type="number" class="w-12 h-8 rounded bg-surface-variant px-1 text-center text-sm" :value="selectedElement!.style.borderWidth || 0" @input="(e: any) => handleInput(selectedId!, 'borderWidth', parseFloat(e.target.value), true)" />
                                     <span class="text-xs">px</span>
                                 </div>
                             </div>
@@ -980,20 +1055,20 @@ const saveInlineCrop = async () => {
                             <div class="flex items-center justify-between">
                                 <span class="label-medium">Shadow</span>
                                 <div class="flex items-center gap-2">
-                                     <md-switch :selected="!!selectedElement.style.shadow" @change="(e: any) => {
-                                         if (e.target.selected) handleInput(selectedId, 'shadow', { color: '#000000', blur: 10, offsetX: 5, offsetY: 5 }, true);
-                                         else handleInput(selectedId, 'shadow', undefined, true);
+                                     <md-switch :selected="!!selectedElement!.style.shadow" @change="(e: any) => {
+                                         if (e.target.selected) handleInput(selectedId!, 'shadow', { color: '#000000', blur: 10, offsetX: 5, offsetY: 5 }, true);
+                                         else handleInput(selectedId!, 'shadow', undefined, true);
                                      }"></md-switch>
                                 </div>
                             </div>
-                            <div v-if="selectedElement.style.shadow" class="grid grid-cols-2 gap-2">
+                            <div v-if="selectedElement!.style.shadow" class="grid grid-cols-2 gap-2">
                                 <div class="col-span-2 flex items-center justify-between bg-surface-high p-2 rounded-lg">
                                     <span class="text-xs">Color</span>
-                                    <input type="color" :value="selectedElement.style.shadow.color" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, color: e.target.value }, true)" class="w-6 h-6 rounded bg-transparent" />
+                                    <input type="color" :value="selectedElement!.style.shadow.color" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, color: e.target.value }, true)" class="w-6 h-6 rounded bg-transparent" />
                                 </div>
-                                <md-filled-text-field label="X" type="number" :value="String(selectedElement.style.shadow.offsetX)" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, offsetX: parseFloat(e.target.value) }, true)"></md-filled-text-field>
-                                <md-filled-text-field label="Y" type="number" :value="String(selectedElement.style.shadow.offsetY)" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, offsetY: parseFloat(e.target.value) }, true)"></md-filled-text-field>
-                                <md-filled-text-field label="Blur" type="number" class="col-span-2" :value="String(selectedElement.style.shadow.blur)" @input="(e: any) => handleInput(selectedId, 'shadow', { ...selectedElement.style.shadow, blur: parseFloat(e.target.value) }, true)"></md-filled-text-field>
+                                <md-filled-text-field label="X" type="number" :value="String(selectedElement!.style.shadow.offsetX)" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, offsetX: parseFloat(e.target.value) }, true)"></md-filled-text-field>
+                                <md-filled-text-field label="Y" type="number" :value="String(selectedElement!.style.shadow.offsetY)" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, offsetY: parseFloat(e.target.value) }, true)"></md-filled-text-field>
+                                <md-filled-text-field label="Blur" type="number" class="col-span-2" :value="String(selectedElement!.style.shadow.blur)" @input="(e: any) => handleInput(selectedId!, 'shadow', { ...selectedElement!.style.shadow, blur: parseFloat(e.target.value) }, true)"></md-filled-text-field>
                             </div>
                          </div>
                     </div>
@@ -1009,7 +1084,7 @@ const saveInlineCrop = async () => {
                     </button>
                     <div v-if="openSections.canvas" class="space-y-4 px-4 pb-4">
                          <md-outlined-select label="Preset Size" class="w-full" @change="(e: any) => {
-                             const p = CANVAS_PRESETS.find(x => x.name === e.target.value);
+                             const p = CANVAS_PRESETS.find((x: any) => x.name === e.target.value);
                              if (p) { posterSize.w = p.w; posterSize.h = p.h; }
                          }">
                              <md-select-option v-for="p in CANVAS_PRESETS" :key="p.name" :value="p.name" :selected="posterSize.w === p.w && posterSize.h === p.h">
@@ -1072,7 +1147,7 @@ const saveInlineCrop = async () => {
                         <p class="label-small text-on-surface-variant/70">Custom HTML content for this element.</p>
                         <textarea 
                             class="w-full h-40 p-3 rounded-xl bg-surface-high border border-outline/10 focus:border-primary outline-none font-mono text-xs transition-colors"
-                            :value="selectedElement.customHtml"
+                            :value="selectedElement!.customHtml"
                             @input="(e: any) => updateElement(selectedId!, { customHtml: e.target.value })"
                             placeholder="<div>...</div>"
                         ></textarea>
@@ -1087,7 +1162,7 @@ const saveInlineCrop = async () => {
                         <p class="label-small text-on-surface-variant/70">Use <code class="bg-surface-variant px-1 rounded">selector</code> to target this element.</p>
                         <textarea 
                             class="w-full h-40 p-3 rounded-xl bg-surface-high border border-outline/10 focus:border-primary outline-none font-mono text-xs transition-colors"
-                            :value="selectedElement.style.customCss"
+                            :value="selectedElement!.style.customCss"
                             @input="(e: any) => handleInput(selectedId!, 'customCss', e.target.value, true)"
                             placeholder="selector { ... }"
                         ></textarea>

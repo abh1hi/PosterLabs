@@ -10,7 +10,6 @@ const posterSize = ref<PosterSize>({ w: 500, h: 700 })
 const scale = ref(1)
 const manualScale = ref(1)
 const panOffset = ref({ x: 0, y: 0 })
-const isPanning = ref(false)
 const isMobilePropertiesOpen = ref(false)
 const isShapesLibraryOpen = ref(false)
 const activeTool = ref<'select' | 'hand'>('select')
@@ -87,7 +86,6 @@ export function useCanvas() {
         scale,
         manualScale,
         panOffset,
-        isPanning,
         isMobilePropertiesOpen,
         isShapesLibraryOpen,
         activeTool,

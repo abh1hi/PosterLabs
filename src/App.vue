@@ -3,10 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useAuth } from './composables/useAuth'
 import { useCanvas } from './composables/useCanvas'
 import { useElements } from './composables/useElements'
-import { useMedia } from './composables/useMedia'
 import { useToasts } from './composables/useToasts'
 import { useKeyboard } from './composables/useKeyboard'
-import LoginView from './views/LoginView.vue'
 import Toolbar from './components/UI/Toolbar.vue'
 import CanvasArea from './components/Editor/CanvasArea.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
@@ -15,7 +13,7 @@ import ReloadPrompt from './components/ReloadPrompt.vue'
 import { 
   LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save, MonitorDown,
   Menu, Settings, LogOut, CheckCircle, Info, AlertCircle,
-  Undo2, Redo2, Layers, Download, User, Cloud, CloudOff, Folder, Code2
+  Undo2, Redo2, Layers, Download, Cloud, CloudOff, Folder, Code2
 } from 'lucide-vue-next'
 
 import '@material/web/iconbutton/icon-button.js'
@@ -25,13 +23,13 @@ import '@material/web/menu/menu.js'
 import '@material/web/menu/menu-item.js'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
-const { currentUser, logout, isLoading: isAuthLoading } = useAuth()
-const { isMobilePropertiesOpen, isToolbarOpen, posterSize, bgColor, activeTab } = useCanvas()
+const { currentUser, logout } = useAuth()
+const { isToolbarOpen, posterSize, bgColor, activeTab } = useCanvas()
 const { undo, redo, canUndo, canRedo, elements } = useElements()
 // const { syncOfflineUploads, lastSyncTime, isUploading } = useMedia() // Removed sync
 const { toasts, removeToast, showToast } = useToasts()
 import { useNetworkStatus } from './composables/useNetworkStatus'
-import { exportProject, importProject } from './utils/projectFile'
+import { exportProject, importProject, exportProjectAsJson } from './utils/projectFile'
 import { exportCanvas } from './utils/exportManager'
 
 // Initialize Keyboard Shortcuts
@@ -40,9 +38,15 @@ useKeyboard()
 const isExportMenuOpen = ref(false)
 
 const handleExport = () => {
-  const success = exportProject(elements.value, { w: posterSize.value.w, h: posterSize.value.h, bg: bgColor.value })
-  if (success) showToast('Project saved as .posterLabs', 'success')
-  else showToast('Failed to save project', 'error')
+    const success = exportProject(elements.value, { w: posterSize.value.w, h: posterSize.value.h, bg: bgColor.value })
+    if (success) showToast('Project saved as .posterLabs', 'success')
+    else showToast('Failed to save project', 'error')
+}
+
+const handleJsonExport = () => {
+    const success = exportProjectAsJson(elements.value, { w: posterSize.value.w, h: posterSize.value.h, bg: bgColor.value })
+    if (success) showToast('Project exported as JSON', 'success')
+    else showToast('Failed to export JSON', 'error')
 }
 
 const handleImageExport = async (format: 'png' | 'jpeg' | 'pdf' | 'webp') => {
@@ -135,12 +139,9 @@ const handleTabChange = (tab: string) => {
 }
 
 const toggleProperties = () => {
-  isMobilePropertiesOpen.value = !isMobilePropertiesOpen.value
-  if (isMobilePropertiesOpen.value) {
     activeTab.value = 'properties'
     isToolbarOpen.value = true
     triggerHaptic()
-  }
 }
 
 onMounted(() => {
@@ -298,6 +299,11 @@ onMounted(() => {
                              <Save slot="start" :size="18" />
                              <div slot="headline">Project (.posterLabs)</div>
                              <div slot="supporting-text">Save for later editing</div>
+                          </md-menu-item>
+                          <md-menu-item @click="handleJsonExport">
+                             <Code2 slot="start" :size="18" />
+                             <div slot="headline">JSON Format</div>
+                             <div slot="supporting-text">Developer friendly export</div>
                           </md-menu-item>
                           <div class="h-px bg-outline/5 my-1 mx-3"></div>
                           <md-menu-item @click="handleImageExport('png')">

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import {  } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 import { 
-  User, Mail, LogOut, CheckCircle, Phone, 
-  Download, RefreshCw, X
+  Mail, LogOut, CheckCircle, Phone, 
+  Download, X
 } from 'lucide-vue-next'
 
 import '@material/web/button/filled-button.js'
@@ -17,7 +17,6 @@ const { currentUser, logout } = useAuth()
 
 // PWA Update Logic
 const {
-  offlineReady,
   needRefresh,
   updateServiceWorker,
 } = useRegisterSW()
