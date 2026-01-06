@@ -8,8 +8,14 @@ import {
 } from 'lucide-vue-next'
 import '@material/web/iconbutton/icon-button.js'
 
+defineOptions({
+  name: 'RenderElement'
+})
+
 const props = defineProps<{
-    element: CanvasElement
+    element: CanvasElement,
+    isChild?: boolean,
+    parentId?: string
 }>()
 
 const { selectedIds, updateElement, deleteElement, duplicateElement, toggleSelection } = useElements()
@@ -27,7 +33,7 @@ const openProperties = () => {
 const elementStyle = computed(() => ({
     width: props.element.style.width ? `${props.element.style.width}px` : 'auto',
     height: props.element.style.height ? `${props.element.style.height}px` : 'auto',
-    transform: `translate(${props.element.x}px, ${props.element.y}px) rotate(${props.element.style.rotate || 0}deg)`,
+    transform: `translate(${props.element.x}px, ${props.element.y}px) rotate(${props.element.style.rotate || 0}deg) skewX(${props.element.style.skewX || 0}deg) skewY(${props.element.style.skewY || 0}deg)`,
     opacity: props.element.style.opacity ?? 1,
     zIndex: props.element.order || 0,
     position: 'absolute' as const,
@@ -43,9 +49,11 @@ const innerStyle = computed(() => {
         fontStyle: s.fontStyle,
         color: s.color,
         textAlign: s.textAlign,
-        backgroundColor: props.element.type !== 'shape' ? s.backgroundColor : undefined,
+        backgroundColor: s.backgroundColor,
+        padding: s.padding ? `${s.padding}px` : undefined,
         borderRadius: typeof s.borderRadius === 'number' ? `${s.borderRadius}px` : s.borderRadius,
         borderWidth: s.borderWidth ? `${s.borderWidth}px` : undefined,
+        borderStyle: s.borderStyle || 'solid',
         borderColor: s.borderColor,
         mixBlendMode: s.mixBlendMode as any,
         transform: `scaleX(${s.flipX ? -1 : 1}) scaleY(${s.flipY ? -1 : 1})`,
@@ -72,16 +80,19 @@ const innerStyle = computed(() => {
 })
 
 const handleSelect = (e: MouseEvent | TouchEvent) => {
-    if (props.element.locked) return
+    // Deep Select Logic (Figma Style)
+    // If Is Child:
+    // 1. If Parent is ALREADY selected -> Select Child
+    // 2. If Parent is NOT selected -> Select Parent
     
+    // Standard Parent/Group Selection Logic
+    e.stopPropagation() 
+    if (props.element.locked) return
+
+    // Normal Selection
     const isMulti = e.shiftKey || e.ctrlKey || e.metaKey
     toggleSelection(props.element.id, isMulti)
     
-    // Only start transform if we are selecting it (or it's already selected)
-    // If we just deselected it, we shouldn't start transform.
-    // Actually, if we click to select, we might want to move immediately.
-    // But if we deselect, we shouldn't.
-    // Check if it is currently selected after toggle
     if (selectedIds.value.includes(props.element.id)) {
         startTransform(props.element.id, 'move', e)
     }
@@ -91,6 +102,29 @@ const toggleLock = () => {
     updateElement(props.element.id, { locked: !props.element.locked })
 }
 
+const getShapePath = (type?: string) => {
+    switch(type) {
+        case 'circle': return 'M 50, 50 m -50, 0 a 50,50 0 1,0 100,0 a 50,50 0 1,0 -100,0'
+        case 'triangle': return 'M 50 0 L 100 100 L 0 100 Z'
+        case 'star': return 'M 50 0 L 61 35 L 98 35 L 68 57 L 79 91 L 50 70 L 21 91 L 32 57 L 2 35 L 39 35 Z'
+        case 'heart': return 'M 50 30 A 20 20 0 0 1 90 30 C 90 60 50 90 50 90 C 50 90 10 60 10 30 A 20 20 0 0 1 50 30 Z'
+        case 'pentagon': return 'M 50 0 L 100 38 L 82 100 L 18 100 L 0 38 Z'
+        case 'hexagon': return 'M 25 0 L 75 0 L 100 50 L 75 100 L 25 100 L 0 50 Z'
+        default: return 'M 0 0 L 100 0 L 100 100 L 0 100 Z'
+    }
+}
+
+const getStrokeDash = (style?: string) => {
+    switch(style) {
+        case 'dashed': return '5,5'
+        case 'dotted': return '2,2'
+        default: return 'none'
+    }
+}
+
+
+
+
 </script>
 
 <template>
@@ -98,8 +132,8 @@ const toggleLock = () => {
     class="element-container group"
     :class="{ 'is-selected': isSelected, 'is-locked': element.locked }"
     :style="elementStyle"
-    @mousedown.stop="handleSelect"
-    @touchstart.stop="handleSelect"
+    @mousedown="handleSelect"
+    @touchstart="handleSelect"
     :data-element-id="element.id"
   >
     <!-- The Element Content -->
@@ -131,14 +165,74 @@ const toggleLock = () => {
         </template>
         
         <template v-else-if="element.type === 'shape'">
-            <div class="w-full h-full transition-all overflow-hidden" :style="{ borderRadius: innerStyle.borderRadius }">
-                <svg v-if="element.style.shapeType === 'circle'" viewBox="0 0 100 100" class="w-full h-full" :style="{ fill: element.style.backgroundColor || '#0061a4' }">
-                    <circle cx="50" cy="50" r="50" />
+            <div class="w-full h-full transition-all overflow-hidden" 
+                 :style="{ 
+                    borderRadius: innerStyle.borderRadius,
+                    border: `${element.style.borderWidth}px ${element.style.borderStyle || 'solid'} ${element.style.borderColor}`,
+                    background: element.style.backgroundColor || '#0061a4',
+                    clipPath: element.style.shapeType === 'circle' ? 'circle(50% at 50% 50%)' :
+                              element.style.shapeType === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' :
+                              element.style.shapeType === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                              element.style.shapeType === 'heart' ? 'path(\'M 10,30 A 20,20 0,0,1 50,30 A 20,20 0,0,1 90,30 Q 90,60 50,90 Q 10,60 10,30 z\')' : // Basic Heart attempt via path or SVG? path() in clip-path is experimental but widespread.
+                              element.style.shapeType === 'pentagon' ? 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)' :
+                              element.style.shapeType === 'hexagon' ? 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' :
+                              element.style.shapeType === 'octagon' ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' :
+                              undefined
+                 }"
+            >
+                <!-- For SVG/Path based clip-paths like Heart, it might be safer to use SVG + mask for cross browser if path() isn't fully supported, but modern Chrome supports path(). Let's stick to polygon for now. Heart is hard with polygon. 
+                     Actually, for 'Star' and 'Heart', SVG is still safer IF we want complex curves. 
+                     BUT, if we want gradients, 'background' on the DIV is best.
+                     Let's use ::before/::after or just the div.
+                     
+                     Note regarding Border on clipped shapes: 
+                     CSS Borders are CLIPPED OUT if we use clip-path!
+                     Solution: Nested Divs. Outer div has size. Inner div has background + clip-path.
+                     But where does the border go? 
+                     Border on shapes like Star is hard with CSS borders. 
+                     We might need to render an SVG STROKE for the border if it's a star.
+                     
+                     Let's revert to SVG for shapes if we want borders? 
+                     OR use drop-shadow filter hack for borders?
+                     
+                     Let's try a hybrid:
+                     If specific shape, use SVG.
+                     If rectangle/circle, use CSS.
+                     
+                     Wait, key requirement is GRADIENT support.
+                     SVG fills accept IDs -> <linearGradient>.
+                     
+                     If we want to keep it simple: define standard Defs for gradients?
+                     Or use 'mask'.
+                     
+                     Let's stick to the previous SVG implementation but clean it up for gradients?
+                     Actually, user wants "Advance Manipulation" like gradients. 
+                     Let's try using a `foreignObject` or simply mapped SVG styles.
+                     
+                     Let's stick to the requested Clip Path Refactor, but be aware of border limitations.
+                     Border on a Star needs to be an SVG stroke.
+                -->
+                
+                <!-- Improved Shape Rendering -->
+                <!-- We use mask-image if possible for best support, or SVG -->
+                
+                 <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible">
+                    <defs>
+                        <linearGradient v-if="element.style.backgroundType === 'gradient'" :id="'grad-' + element.id" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" :stop-color="element.style.backgroundColor || '#0061a4'" />
+                            <stop offset="100%" stop-color="transparent" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <path 
+                        :d="getShapePath(element.style.shapeType)" 
+                        :fill="element.style.backgroundType === 'gradient' ? `url(#grad-${element.id})` : (element.style.backgroundColor || '#0061a4')"
+                        :stroke="element.style.borderColor || 'transparent'"
+                        :stroke-width="element.style.borderWidth || 0"
+                        :stroke-dasharray="getStrokeDash(element.style.borderStyle)"
+                        vector-effect="non-scaling-stroke"
+                    />
                 </svg>
-                <svg v-else-if="element.style.shapeType === 'triangle'" viewBox="0 0 100 100" class="w-full h-full" :style="{ fill: element.style.backgroundColor || '#0061a4' }">
-                    <path d="M50 0 L100 100 L0 100 Z" />
-                </svg>
-                <div v-else class="w-full h-full" :style="{ backgroundColor: element.style.backgroundColor || '#0061a4', borderRadius: innerStyle.borderRadius }"></div>
             </div>
         </template>
 
@@ -148,6 +242,20 @@ const toggleLock = () => {
                     {{ element.style.customCss.replace(/selector/g, `[data-element-id="${element.id}"] .custom-content`) }}
                 </component>
                 <div class="custom-content w-full h-full" v-html="element.customHtml || '<div style=\'padding:20px;background:#eee\'>Custom HTML</div>'"></div>
+            </div>
+        </template>
+
+        <template v-else-if="element.type === 'group' && element.children">
+            <div class="w-full h-full pointer-events-none">
+                <!-- Recursive Render -->
+                 <RenderElement 
+                    v-for="child in element.children" 
+                    :key="child.id" 
+                    :element="child"
+                    :is-child="true" 
+                    :parent-id="element.id"
+                    class="pointer-events-auto"
+                />
             </div>
         </template>
     </div>
@@ -207,12 +315,18 @@ const toggleLock = () => {
 .control-btn.danger:hover { @apply text-error bg-error/10; }
 
 .handle {
-  @apply absolute w-4 h-4 bg-white border-2 border-primary rounded-full z-40 cursor-nwse-resize shadow-md hover:scale-125 transition-transform pointer-events-auto;
+  /* Increased from w-4 h-4 (16px) to w-6 h-6 (24px) for better touch targets */
+  @apply absolute w-6 h-6 bg-white border-2 border-primary rounded-full z-40 cursor-nwse-resize shadow-md active:scale-110 hover:scale-110 transition-transform pointer-events-auto;
+  /* Add explicit large touch target via pseudo-element if needed, but 24px visual is good start */
 }
-.top-left { top: -8px; left: -8px; cursor: nwse-resize; }
-.top-right { top: -8px; right: -8px; cursor: nesw-resize; }
-.bottom-left { bottom: -8px; left: -8px; cursor: nesw-resize; }
-.bottom-right { bottom: -8px; right: -8px; cursor: nwse-resize; }
+.handle::after {
+    content: '';
+    @apply absolute -top-4 -bottom-4 -left-4 -right-4; /* Expand hit area by 16px on all sides */
+}
+.top-left { top: -12px; left: -12px; cursor: nwse-resize; }
+.top-right { top: -12px; right: -12px; cursor: nesw-resize; }
+.bottom-left { bottom: -12px; left: -12px; cursor: nesw-resize; }
+.bottom-right { bottom: -12px; right: -12px; cursor: nwse-resize; }
 
 .action-circle {
   @apply w-16 h-16 rounded-full flex items-center justify-center shadow-2xl cursor-grab transition-transform active:scale-95 border-4 border-white dark:border-surface;

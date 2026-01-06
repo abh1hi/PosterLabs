@@ -281,7 +281,20 @@ export function useProjects() {
             showToast('Failed to import project: ' + e.message, 'error')
             return false
         }
+
     }
+
+    const createProjectFromJsonString = (jsonStr: string) => {
+        try {
+            const data = JSON.parse(jsonStr)
+            return createProjectFromImport(data, 'Pasted Project')
+        } catch (e: any) {
+            console.error('Import failed', e)
+            showToast('Invalid JSON: ' + e.message, 'error')
+            return false
+        }
+    }
+
 
     return {
         projects,
@@ -290,6 +303,7 @@ export function useProjects() {
         deleteProject,
         createNewProject,
         createProjectFromImport,
+        createProjectFromJsonString,
         refreshProjects,
         deleteProjects
     }

@@ -120,6 +120,12 @@ const lastTouchDistance = ref<number | null>(null)
 const lastTouchCenter = ref<{ x: number, y: number } | null>(null)
 const lastSingleTouch = ref<{ x: number, y: number } | null>(null)
 
+// One-Handed Zoom State
+const lastTapTime = ref(0)
+const isDoubleTapZooming = ref(false)
+const oneFingerZoomStartY = ref(0)
+const startScale = ref(1)
+
 const getDistance = (t1: Touch, t2: Touch) => {
     const dx = t1.clientX - t2.clientX
     const dy = t1.clientY - t2.clientY
@@ -134,14 +140,38 @@ const getCenter = (t1: Touch, t2: Touch) => {
 }
 
 const handleTouchStart = (e: TouchEvent) => {
+    // 1. Two Finger Gestures (Pinch / Pan)
     if (e.touches.length === 2) {
         lastTouchDistance.value = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
         lastTouchCenter.value = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
-    } else if (e.touches.length === 1 && activeTool.value === 'hand') {
+        return
+    } 
+    
+    // 2. Single Finger Gestures
+    if (e.touches.length === 1) {
         const touch = e.touches[0] as Touch
-        lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
-    } else {
-        handleCanvasClick(e)
+        const now = Date.now()
+        const isBackground = e.target === e.currentTarget || (e.target as HTMLElement).id === 'poster-content' || (e.target as HTMLElement).id === 'poster-canvas-container'
+
+        // Double Tap Detection (for One-Handed Zoom)
+        if (now - lastTapTime.value < 300 && isBackground) {
+            // Double Tap Started -> Wait for drag to zoom
+            isDoubleTapZooming.value = true
+            oneFingerZoomStartY.value = touch.clientY
+            startScale.value = manualScale.value
+            e.preventDefault() // Prevent default double-tap zoom of browser
+        } else {
+             // Single Tap
+             lastTapTime.value = now
+             
+             // If tool is Hand OR clicking on background -> Start Pan
+             if (activeTool.value === 'hand' || isBackground) {
+                 lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
+             } else {
+                 // Touching an element (e.g. to select/drag it)
+                 handleCanvasClick(e)
+             }
+        }
     }
 }
 
@@ -165,7 +195,7 @@ const handleTouchMove = (e: TouchEvent) => {
     }
 
     if (e.touches.length === 2) {
-        e.preventDefault() // Prevent page scroll (important) via CSS too if needed
+        e.preventDefault() // Prevent page scroll
 
         // Pinch Zoom
         const dist = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
@@ -183,8 +213,25 @@ const handleTouchMove = (e: TouchEvent) => {
             panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
         }
         lastTouchCenter.value = center
-    } else if (e.touches.length === 1 && activeTool.value === 'hand' && lastSingleTouch.value) {
+        return
+    } 
+    
+    // One-Handed Zoom (Double Tap + Drag)
+    if (isDoubleTapZooming.value && e.touches.length === 1) {
         e.preventDefault()
+        const touch = e.touches[0] as Touch
+        const dy = touch.clientY - oneFingerZoomStartY.value
+        
+        // Drag Down = Zoom In, Drag Up = Zoom Out (Standard Map Behavior)
+        // Sensitivity factor 0.005
+        const zoomFactor = 1 + (dy * 0.005)
+        manualScale.value = Math.min(Math.max(startScale.value * zoomFactor, 0.2), 5)
+        return
+    }
+
+    // Single Finger Pan
+    if (lastSingleTouch.value && e.touches.length === 1) {
+        e.preventDefault() // Prevent pull-to-refresh / scrolling
         const touch = e.touches[0] as Touch
         const dx = touch.clientX - lastSingleTouch.value.x
         const dy = touch.clientY - lastSingleTouch.value.y
@@ -223,8 +270,10 @@ const handleTouchEnd = (e: TouchEvent) => {
         lastTouchDistance.value = null
         lastTouchCenter.value = null
     }
+    
     if (e.touches.length === 0) {
         lastSingleTouch.value = null
+        isDoubleTapZooming.value = false
     }
 }
 
@@ -353,6 +402,55 @@ const handleResizeMove = (e: MouseEvent | TouchEvent) => {
     }
 }
 
+const handleDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy'
+    }
+}
+
+const handleDrop = (e: DragEvent) => {
+    e.preventDefault()
+    
+    // Check for Asset Drop
+    const assetData = e.dataTransfer?.getData('application/posterlab-asset')
+    if (assetData) {
+        try {
+            const data = JSON.parse(assetData)
+            const contentRect = document.getElementById('poster-content')?.getBoundingClientRect()
+            
+            if (contentRect) {
+                // Determine drop position relative to poster
+                const clientX = e.clientX
+                const clientY = e.clientY
+                
+                const x = (clientX - contentRect.left) / (scale.value * manualScale.value)
+                const y = (clientY - contentRect.top) / (scale.value * manualScale.value)
+                
+                // Add the element centered on the cursor if possible, or top-left at cursor
+                // If the element has width/height, center it.
+                // data.style might have width/height
+                let offsetX = 0
+                let offsetY = 0
+                
+                if (data.style?.width) offsetX = typeof data.style.width === 'number' ? data.style.width / 2 : 0
+                if (data.style?.height) offsetY = typeof data.style.height === 'number' ? data.style.height / 2 : 0
+
+                // Add Element (New ID generated by addElement)
+                const { addElement } = useElements() // Re-using existing composable import
+                addElement({
+                    ...data,
+                    x: x - offsetX,
+                    y: y - offsetY,
+                    id: undefined
+                })
+            }
+        } catch (err) {
+            console.error('Invalid drop data', err)
+        }
+    }
+}
+
 const handleResizeEnd = () => {
     isResizingCanvas.value = false
     resizeHandle.value = null
@@ -361,6 +459,7 @@ const handleResizeEnd = () => {
     window.removeEventListener('mouseup', handleResizeEnd)
     window.removeEventListener('touchend', handleResizeEnd)
 }
+
 
 </script>
 
@@ -400,6 +499,8 @@ const handleResizeEnd = () => {
             backgroundColor: backgroundType === 'solid' ? bgColor : undefined,
             backgroundImage: backgroundType === 'gradient' ? gradientStyle : undefined,
           }"
+          @dragover="handleDragOver"
+          @drop="handleDrop"
        >
           <!-- Grid Overlay -->
           <div v-if="showGrid" class="absolute inset-0 pointer-events-none z-[1]" 

@@ -2,9 +2,9 @@
 import { ref } from 'vue'
 import { useProjects } from '../../../composables/useProjects'
 import { useToasts } from '../../../composables/useToasts'
-import { Plus, Save, FileJson, Folder, Box, Trash2 } from 'lucide-vue-next'
+import { Plus, Save, FileJson, Folder, Box, Trash2, ClipboardPaste } from 'lucide-vue-next'
 
-const { projects, loadProject, deleteProject, deleteProjects, createNewProject, createProjectFromImport, saveProject } = useProjects()
+const { projects, loadProject, deleteProject, deleteProjects, createNewProject, createProjectFromImport, createProjectFromJsonString, saveProject } = useProjects()
 const { showToast } = useToasts()
 const projectInputRef = ref<HTMLInputElement | null>(null)
 
@@ -46,6 +46,19 @@ const handleProjectImport = (e: Event) => {
     reader.readAsText(file)
 }
 
+const handlePasteJson = async () => {
+    try {
+        const text = await navigator.clipboard.readText()
+        if (!text) {
+            showToast('Clipboard is empty', 'error')
+            return
+        }
+        createProjectFromJsonString(text)
+    } catch (e) {
+        showToast('Failed to read clipboard', 'error')
+    }
+}
+
 const handleSaveProject = () => {
     const name = window.prompt('Enter project name:', 'My Awesome Poster');
     if (name) saveProject(name);
@@ -55,7 +68,7 @@ const handleSaveProject = () => {
 <template>
     <div class="p-4 space-y-6">
         <!-- Actions -->
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-4 gap-3">
             <button @click="createNewProject" class="p-3 bg-primary-container rounded-xl flex flex-col items-center justify-center gap-2 hover:brightness-105 transition-all text-on-primary-container">
                 <Plus :size="24" />
                 <span class="label-medium font-bold">New</span>
@@ -67,6 +80,10 @@ const handleSaveProject = () => {
             <button @click="projectInputRef?.click()" class="p-3 bg-surface-high rounded-xl flex flex-col items-center justify-center gap-2 hover:brightness-105 transition-all border border-outline/10">
                 <FileJson :size="24" class="text-secondary" />
                 <span class="label-medium font-bold">Import</span>
+            </button>
+            <button @click="handlePasteJson" class="p-3 bg-secondary-container rounded-xl flex flex-col items-center justify-center gap-2 hover:brightness-105 transition-all text-on-secondary-container">
+                <ClipboardPaste :size="24" />
+                <span class="label-medium font-bold">Paste JSON</span>
             </button>
             <input type="file" hidden ref="projectInputRef" accept=".json,.posterLabs" @change="handleProjectImport" />
         </div>

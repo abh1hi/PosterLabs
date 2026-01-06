@@ -15,6 +15,7 @@ import ToolbarCode from './sections/ToolbarCode.vue'
 import ToolbarLayers from './sections/ToolbarLayers.vue'
 import ToolbarThemes from './sections/ToolbarThemes.vue'
 import ToolbarThemeDesigner from './sections/ToolbarThemeDesigner.vue'
+import ToolbarAssets from './sections/ToolbarAssets.vue'
 import ProfilePanel from './ProfilePanel.vue'
 
 import '@material/web/textfield/filled-text-field.js'
@@ -80,6 +81,7 @@ const { selectedId, shuffleElements, duplicateElement, deleteElement } = useElem
         <ToolbarThemes v-if="activeTab === 'themes'" />
         <ToolbarThemeDesigner v-if="activeTab === 'theme-designer'" />
         <ToolbarLayers v-if="activeTab === 'layers'" />
+        <ToolbarAssets v-if="activeTab === 'assets'" />
         <ToolbarCode v-if="activeTab === 'code'" />
         
         <div v-if="activeTab === 'profile'" class="h-full">

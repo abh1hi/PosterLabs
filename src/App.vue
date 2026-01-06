@@ -175,6 +175,10 @@ onMounted(() => {
                   <Palette :size="20" />
                   <span class="rail-label">Themes</span>
                </button>
+               <button @click="handleTabChange('assets')" class="rail-item" :class="{ active: activeTab === 'assets' }">
+                  <Image :size="20" />
+                  <span class="rail-label">Assets</span>
+               </button>
                <button @click="handleTabChange('elements')" class="rail-item" :class="{ active: activeTab === 'elements' }">
                   <Box :size="20" />
                   <span class="rail-label">Elements</span>
@@ -395,6 +399,12 @@ onMounted(() => {
                   <Palette :size="20" />
                </div>
                <span class="label-small">Themes</span>
+            </button>
+            <button @click="handleTabChange('assets')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'assets' ? 'text-primary' : 'text-on-surface-variant'">
+               <div :class="activeTab === 'assets' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
+                  <Image :size="20" />
+               </div>
+               <span class="label-small">Assets</span>
             </button>
             <button @click="handleTabChange('elements')" class="flex flex-col items-center gap-1 shrink-0 min-w-[70px] py-2" :class="activeTab === 'elements' ? 'text-primary' : 'text-on-surface-variant'">
                <div :class="activeTab === 'elements' ? 'bg-primary-container w-16 h-8 rounded-full flex items-center justify-center' : ''">
