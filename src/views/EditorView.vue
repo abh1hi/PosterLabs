@@ -253,133 +253,159 @@ onMounted(() => {
       <!-- Main Editor Container -->
       <div class="flex flex-col flex-1 relative overflow-hidden">
         
-        <!-- Redesigned Top App Bar (Google UI Inspired) -->
-        <header class="h-14 sm:h-16 flex items-center justify-between px-2 sm:px-4 bg-surface-low/95 backdrop-blur-md border-b border-outline/5 z-30 shrink-0 sticky top-0 transition-all duration-300">
+        <!-- Premium Top App Bar (Google UI + Canvas Inspired) -->
+        <header class="h-16 flex items-center justify-between px-4 sm:px-6 bg-surface/60 backdrop-blur-xl border-b border-outline/10 z-30 shrink-0 sticky top-0 transition-all duration-500 shadow-sm shadow-black/5">
            <!-- Left: Brand & Poster Info -->
-           <div class="flex items-center gap-1 sm:gap-2 min-w-0">
-              <md-icon-button class="md:hidden" @click="toggleProperties">
+           <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+              <md-icon-button class="md:hidden hover:bg-surface-variant/20 transition-colors" @click="toggleProperties">
                  <Menu :size="20" />
               </md-icon-button>
               
-              <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div class="flex items-center gap-4 sm:gap-5 min-w-0">
                  <!-- Logo Container / Home Button -->
-                 <div @click="handleBackToHome" class="w-9 h-9 sm:w-11 sm:h-11 bg-primary-container/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 border border-primary/10 cursor-pointer hover:bg-primary-container/30 transition-colors" title="Back to Home">
-                    <ArrowLeft class="text-primary hidden group-hover:block" :size="20" />
-                    <img src="/pwa-192x192.png" alt="PosterLab" class="w-8 h-8 sm:w-9 sm:h-9 object-contain opacity-95 group-hover:hidden">
+                 <div @click="handleBackToHome" class="group relative w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-surface-container rounded-2xl flex items-center justify-center shrink-0 border border-outline/10 cursor-pointer shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 transform active:scale-95" title="Back to Home">
+                    <div class="absolute inset-0 bg-primary/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <ArrowLeft class="text-primary hidden group-hover:block relative z-10" :size="20" />
+                    <img src="/pwa-192x192.png" alt="PosterLab" class="w-8 h-8 sm:w-9 sm:h-9 object-contain opacity-95 group-hover:hidden relative z-10">
                  </div>
 
                  <!-- Poster Title & Status -->
                  <div class="flex flex-col min-w-0">
-                    <div class="flex items-center gap-1 group cursor-pointer">
-                       <h1 class="title-small sm:title-medium font-semibold text-on-surface truncate min-w-0" title="My Creative Poster">
+                    <div class="flex items-center gap-2 group cursor-pointer max-w-full">
+                       <h1 class="title-medium sm:headline-small font-bold text-on-surface truncate min-w-0 tracking-tight" title="My Creative Poster">
                           My Creative Poster
                        </h1>
-                       <div class="opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block">
-                          <Palette :size="14" class="text-on-surface-variant" />
+                       <div class="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-1 group-hover:translate-x-0 hidden sm:block">
+                          <button class="p-1.5 hover:bg-surface-variant/30 rounded-lg text-on-surface-variant/60 hover:text-primary transition-colors">
+                             <PenTool :size="14" />
+                          </button>
                        </div>
                     </div>
 
-                    <!-- Status indicators (Google Docs Style) -->
-                    <div class="flex items-center gap-2 sm:gap-3 px-1">
-                       <div v-if="!networkStatus.connected" class="flex items-center gap-1 text-error/80 label-small">
+                    <!-- Status indicators (Modern Doc Style) -->
+                    <div class="flex items-center gap-2 px-0.5">
+                       <div v-if="!networkStatus.connected" class="flex items-center gap-1.5 text-error/90 label-small font-medium bg-error/5 px-2 py-0.5 rounded-full border border-error/10">
                            <CloudOff :size="12" />
-                           <span class="hidden sm:inline">Offline</span>
+                           <span class="hidden sm:inline">Offline Mode</span>
                        </div>
-                       <div v-else class="flex items-center gap-1 text-on-surface-variant/60 label-small">
+                       <div v-else class="flex items-center gap-1.5 text-primary/70 label-small font-medium bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
                            <Cloud :size="12" />
-                           <span class="hidden sm:inline">Saved to Local</span>
+                           <span class="hidden sm:inline">Successively Saved</span>
                        </div>
                        <div class="w-1 h-1 rounded-full bg-outline/20"></div>
-                       <span class="label-small text-on-surface-variant/40 italic">Draft</span>
+                       <span class="label-small text-on-surface-variant/60 font-medium tracking-wide uppercase text-[10px]">Version 1.2</span>
                     </div>
                  </div>
               </div>
            </div>
 
-           <!-- Right: Actions & History -->
-           <div class="flex items-center gap-1 sm:gap-3 shrink-0">
-              <!-- History Controls Grouped (Hidden on mobile) -->
-              <div class="hidden md:flex items-center bg-surface-container-highest/20 rounded-full p-1 border border-outline/5">
-                 <md-icon-button @click="undo" :disabled="!canUndo" class="h-9 w-9">
-                    <Undo2 :size="18" />
-                 </md-icon-button>
-                 <div class="w-px h-5 bg-outline/10 mx-0.5"></div>
-                 <md-icon-button @click="redo" :disabled="!canRedo" class="h-9 w-9">
-                    <Redo2 :size="18" />
-                 </md-icon-button>
-              </div>
+           <!-- Center: Quick Tools (Enhanced Responsive) -->
+           <div class="flex items-center bg-surface-container-high/40 rounded-2xl px-1 sm:px-2 py-1 gap-0.5 sm:gap-1 border border-outline/10 backdrop-blur-md">
+              <md-icon-button @click="undo" :disabled="!canUndo" class="h-9 w-9 sm:h-10 sm:w-10 hover:bg-surface-variant/20 transition-colors">
+                 <Undo2 :size="18" />
+              </md-icon-button>
+              <div class="w-px h-6 bg-outline/10 mx-0.5 sm:mx-1"></div>
+              <md-icon-button @click="redo" :disabled="!canRedo" class="h-9 w-9 sm:h-10 sm:w-10 hover:bg-surface-variant/20 transition-colors">
+                 <Redo2 :size="18" />
+              </md-icon-button>
+           </div>
 
+           <!-- Right: Actions & History -->
+           <div class="flex items-center gap-2 sm:gap-4 shrink-0">
               <!-- Action Buttons -->
-              <div class="flex items-center gap-1 sm:gap-2">
+              <div class="flex items-center gap-2">
                 <input type="file" ref="projectInputRef" hidden accept=".posterLabs,.json" @change="handleImportFile" />
-                <md-icon-button @click="projectInputRef?.click()" title="Open Project (.posterLabs, .json)" class="bg-surface-high border border-outline/5 rounded-full">
+                
+                <md-icon-button @click="projectInputRef?.click()" title="Open Project" class="hidden sm:flex bg-surface-container-high border border-outline/10 rounded-xl hover:bg-surface-container-highest transition-colors">
                     <Folder :size="20" />
                 </md-icon-button>
 
-                <md-filled-tonal-button class="h-9 sm:h-10 px-2 sm:px-4 rounded-full transition-all">
-                   <Share2 slot="icon" :size="18" />
-                   <span class="hidden sm:inline">Share</span>
+                <div class="h-8 w-px bg-outline/10 mx-1 hidden sm:block"></div>
+
+                <md-filled-tonal-button class="h-10 sm:h-11 px-3 sm:px-5 rounded-xl transition-all hover:shadow-md active:scale-95 font-medium tracking-wide">
+                   <Share2 slot="icon" :size="20" />
+                   <span class="hidden sm:inline">Collaboration</span>
                 </md-filled-tonal-button>
 
-                 <div class="relative">
-                    <md-filled-button id="export-menu-anchor" @click="isExportMenuOpen = !isExportMenuOpen" class="h-9 sm:h-10 px-2 sm:px-4 rounded-full shadow-sm">
-                       <Download slot="icon" :size="18" />
-                       <span class="hidden sm:inline">Export</span>
-                       <md-menu anchor="export-menu-anchor" :open="isExportMenuOpen" @closed="isExportMenuOpen = false" positioning="popover" class="mt-2 text-start">
-                          <md-menu-item @click="handleExport">
-                             <Save slot="start" :size="18" />
-                             <div slot="headline">Project (.posterLabs)</div>
-                             <div slot="supporting-text">Save for later editing</div>
-                          </md-menu-item>
-                          <md-menu-item @click="handleJsonExport">
-                             <Code2 slot="start" :size="18" />
-                             <div slot="headline">JSON Format</div>
-                             <div slot="supporting-text">Developer friendly export</div>
-                          </md-menu-item>
-                          <div class="h-px bg-outline/5 my-1 mx-3"></div>
-                          <md-menu-item @click="handleImageExport('png')">
-                             <Image slot="start" :size="18" />
-                             <div slot="headline">PNG Image</div>
-                             <div slot="supporting-text">High quality image</div>
-                          </md-menu-item>
-                          <md-menu-item @click="handleImageExport('jpeg')">
-                             <Image slot="start" :size="18" />
-                             <div slot="headline">JPEG Image</div>
-                             <div slot="supporting-text">Web optimized</div>
-                          </md-menu-item>
-                          <md-menu-item @click="handleImageExport('webp')">
-                             <Zap slot="start" :size="18" />
-                             <div slot="headline">WEBP Image</div>
-                             <div slot="supporting-text">Modern format</div>
-                          </md-menu-item>
-                           <md-menu-item @click="handleImageExport('pdf')">
-                             <FileText slot="start" :size="18" />
-                             <div slot="headline">PDF Document</div>
-                             <div slot="supporting-text">Print ready</div>
-                          </md-menu-item>
-                       </md-menu>
+                 <div class="relative group">
+                    <md-filled-button id="export-menu-anchor" @click="isExportMenuOpen = !isExportMenuOpen" class="h-10 sm:h-11 px-4 sm:px-6 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold tracking-wide transform active:scale-95">
+                       <Download slot="icon" :size="20" />
+                       <span class="hidden sm:inline">Export Design</span>
+                       
+                        <md-menu anchor="export-menu-anchor" :open="isExportMenuOpen" @closed="isExportMenuOpen = false" positioning="popover" class="mt-3 text-start min-w-[240px] rounded-24 overflow-hidden border border-outline/10 shadow-2xl">
+                           <div class="px-4 py-3 bg-surface-variant/10 border-b border-outline/5">
+                              <span class="label-small text-on-surface-variant font-bold uppercase tracking-widest opacity-70">Project Formats</span>
+                           </div>
+                           <md-menu-item @click="handleExport" class="hover:bg-primary/5 transition-colors">
+                              <div slot="start" class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                 <Save :size="18" />
+                              </div>
+                              <div slot="headline" class="font-bold text-on-surface">Source File (.poster)</div>
+                              <div slot="supporting-text" class="text-[11px]">Best for future editing</div>
+                           </md-menu-item>
+                           <md-menu-item @click="handleJsonExport" class="hover:bg-secondary/5 transition-colors">
+                              <div slot="start" class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+                                 <Code2 :size="18" />
+                              </div>
+                              <div slot="headline" class="font-bold text-on-surface">JSON Schema</div>
+                              <div slot="supporting-text" class="text-[11px]">Raw project data</div>
+                           </md-menu-item>
+                           
+                           <div class="h-px bg-outline/5 my-1 mx-2"></div>
+                           
+                           <div class="px-4 py-3 bg-surface-variant/10 border-y border-outline/5">
+                              <span class="label-small text-on-surface-variant font-bold uppercase tracking-widest opacity-70">Ready to Share</span>
+                           </div>
+                           <md-menu-item @click="handleImageExport('png')" class="hover:bg-surface-variant/10 transition-colors">
+                              <div slot="start" class="w-8 h-8 rounded-lg bg-surface-highest flex items-center justify-center text-on-surface-variant">
+                                 <Image :size="18" />
+                              </div>
+                              <div slot="headline" class="font-bold text-on-surface">High Quality PNG</div>
+                              <div slot="supporting-text" class="text-[11px]">Best for web & social</div>
+                           </md-menu-item>
+                           <md-menu-item @click="handleImageExport('jpeg')" class="hover:bg-surface-variant/10 transition-colors">
+                              <div slot="start" class="w-8 h-8 rounded-lg bg-surface-highest flex items-center justify-center text-on-surface-variant">
+                                 <Image :size="18" />
+                              </div>
+                              <div slot="headline" class="font-bold text-on-surface">Optimized JPEG</div>
+                              <div slot="supporting-text" class="text-[11px]">Smaller file size</div>
+                           </md-menu-item>
+                           <md-menu-item @click="handleImageExport('webp')" class="hover:bg-surface-variant/10 transition-colors">
+                              <div slot="start" class="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+                                 <Zap :size="18" />
+                              </div>
+                              <div slot="headline" class="font-bold text-on-surface">Modern WebP</div>
+                              <div slot="supporting-text" class="text-[11px]">Fastest loading format</div>
+                           </md-menu-item>
+                           <div class="h-px bg-outline/5 my-1 mx-2"></div>
+                           <md-menu-item @click="handleImageExport('pdf')" class="hover:bg-error/5 transition-colors">
+                              <div slot="start" class="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center text-error">
+                                 <FileText :size="18" />
+                              </div>
+                              <div slot="headline" class="font-bold text-on-surface">PDF Document</div>
+                              <div slot="supporting-text" class="text-[11px]">Professional printing</div>
+                           </md-menu-item>
+                        </md-menu>
                     </md-filled-button>
                  </div>
-
-                 <md-icon-button v-if="showInstallButton" @click="installApp" class="bg-secondary-container/30 text-secondary rounded-xl hover:bg-secondary-container/50 hidden sm:flex">
-                    <MonitorDown :size="20" />
-                 </md-icon-button>
               </div>
 
               <!-- Profile Avatar (Integrated) -->
-              <div class="ml-1 sm:ml-2">
-                 <md-icon-button id="header-user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen" class="w-8 h-8 sm:w-10 sm:h-10 p-0 overflow-hidden ring-1 ring-outline/10">
-                    <img v-if="currentUser?.photoURL" :src="currentUser.photoURL" class="w-full h-full object-cover" />
-                    <User v-else :size="20" class="text-on-surface-variant" />
-                 </md-icon-button>
-                 <md-menu anchor="header-user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false" positioning="popover">
-                    <md-menu-item @click="handleTabChange('profile')">
+              <div class="pl-1 sm:pl-2 border-l border-outline/10 ml-1">
+                 <button id="header-user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full p-0.5 overflow-hidden ring-2 ring-outline/10 hover:ring-primary/40 transition-all duration-300 transform active:scale-95 shadow-sm">
+                    <div class="w-full h-full rounded-full overflow-hidden bg-surface-container-highest flex items-center justify-center">
+                        <img v-if="currentUser?.photoURL" :src="currentUser.photoURL" class="w-full h-full object-cover" />
+                        <User v-else :size="22" class="text-on-surface-variant" />
+                    </div>
+                 </button>
+                 <md-menu anchor="header-user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false" positioning="popover" class="mt-3 rounded-2xl shadow-2xl border border-outline/10 min-w-[200px]">
+                    <md-menu-item @click="handleTabChange('profile')" class="py-2">
                        <User slot="start" :size="18" />
-                       <div slot="headline">Profile & Settings</div>
+                       <div slot="headline" class="font-bold">Account Settings</div>
                     </md-menu-item>
-                    <md-menu-item @click="handleAppLogout">
+                    <md-menu-item @click="handleAppLogout" class="py-2 text-error">
                        <LogOut slot="start" :size="18" />
-                       <div slot="headline">Sign Out</div>
+                       <div slot="headline" class="font-bold">Logout Session</div>
                     </md-menu-item>
                  </md-menu>
               </div>

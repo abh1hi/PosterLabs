@@ -13,7 +13,7 @@ const { elements, selectedId, toggleSelection } = useElements()
 const { 
   posterSize, bgColor, scale, panOffset,
   backgroundType, gradientStyle, showGrid,
-  manualScale, activeTool, isDrawing, brushSettings
+  manualScale, activeTool, isDrawing, brushSettings, activeTab
 } = useCanvas()
 
 
@@ -230,7 +230,7 @@ const handleTouchMove = (e: TouchEvent) => {
     }
 
     // Single Finger Pan
-    if (lastSingleTouch.value && e.touches.length === 1) {
+    if (activeTool.value === 'hand' && lastSingleTouch.value && e.touches.length === 1) {
         e.preventDefault() // Prevent pull-to-refresh / scrolling
         const touch = e.touches[0] as Touch
         const dx = touch.clientX - lastSingleTouch.value.x
@@ -300,6 +300,19 @@ const handleWheel = (e: WheelEvent) => {
 // We need to add global mouse listeners or use canvas events if we can capture them reliably
 // Ideally, we add window listeners on mousedown
 
+// --- Mouse Pan & Select Logic ---
+const isMousePanning = ref(false)
+const lastMousePos = ref({ x: 0, y: 0 })
+
+const handleMouseDown = (e: MouseEvent) => {
+    if (activeTool.value === 'hand') {
+        isMousePanning.value = true
+        lastMousePos.value = { x: e.clientX, y: e.clientY }
+        return
+    }
+    handleCanvasClick(e)
+}
+
 const handleMouseMove = (e: MouseEvent) => {
     if (isDragSelecting.value) {
          e.preventDefault()
@@ -320,25 +333,49 @@ const handleMouseMove = (e: MouseEvent) => {
 
 const handleMouseUp = (_e: MouseEvent) => {
     if (isDragSelecting.value) {
-        // Logic duplicated from TouchEnd - refactor? For now inline.
          const box = selectionBox.value
-        elements.value.forEach(el => {
+         elements.value.forEach(el => {
              const elW = el.style.width || 0
              const elH = el.style.height || 0
              const overlaps = !(box.x > el.x + elW || box.x + box.w < el.x || box.y > el.y + elH || box.y + box.h < el.y)
              if (overlaps && !el.locked && !el.hidden) {
                  toggleSelection(el.id, true) 
              }
-        })
-        isDragSelecting.value = false
-        selectionBox.value = { x: 0, y: 0, w: 0, h: 0 }
+         })
+         isDragSelecting.value = false
+         selectionBox.value = { x: 0, y: 0, w: 0, h: 0 }
     }
     window.removeEventListener('mousemove', handleMouseMove)
     window.removeEventListener('mouseup', handleMouseUp)
 }
 
+const handleGlobalMouseMove = (e: MouseEvent) => {
+    if (isMousePanning.value && activeTool.value === 'hand') {
+        const dx = e.clientX - lastMousePos.value.x
+        const dy = e.clientY - lastMousePos.value.y
+        panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
+        lastMousePos.value = { x: e.clientX, y: e.clientY }
+        return
+    }
+    handleMouseMove(e)
+}
+
+const handleGlobalMouseUp = (e: MouseEvent) => {
+    isMousePanning.value = false
+    handleMouseUp(e)
+}
+
+// Reset states on tool or tab change
+watch([activeTool, activeTab], () => {
+    isDrawing.value = false
+    isDragSelecting.value = false
+    isMousePanning.value = false
+    lastSingleTouch.value = null
+})
+
 watch(isDragSelecting, (val) => {
     if (val) {
+        // We already have mousemove/up on the container, but window listeners are safer for dragging outside
         window.addEventListener('mousemove', handleMouseMove)
         window.addEventListener('mouseup', handleMouseUp)
     }
@@ -578,11 +615,14 @@ const endDrawing = () => {
         'cursor-grab': activeTool === 'hand' && !lastSingleTouch,
         'cursor-grabbing': activeTool === 'hand' && lastSingleTouch
     }"
-    @mousedown="handleCanvasClick"
+    @mousedown="handleMouseDown"
+    @mousemove="handleGlobalMouseMove"
+    @mouseup="handleGlobalMouseUp"
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
     @touchend="handleTouchEnd"
     @wheel="handleWheel"
+  >
   >
     <!-- Background Grid / Texture -->
     <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px]"></div>
