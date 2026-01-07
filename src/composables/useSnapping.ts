@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { type CanvasElement } from './useElements'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
 export interface Rect {
     x: number
@@ -19,11 +20,15 @@ interface Guide {
 
 const SNAP_THRESHOLD = 5
 const guides = ref<Guide[]>([])
+let lastSnapX: number | null = null
+let lastSnapY: number | null = null
 
 export function useSnapping() {
 
     const clearGuides = () => {
         guides.value = []
+        lastSnapX = null
+        lastSnapY = null
     }
 
     const getSnappedPosition = (
@@ -194,6 +199,18 @@ export function useSnapping() {
             newY = bestYSnap.val
             newGuides.push(bestYSnap.guide)
         }
+
+        // Haptic Feedback for Snapping
+        const currentSnapX = bestXSnap.guide?.position ?? null
+        const currentSnapY = bestYSnap.guide?.position ?? null
+
+        if ((currentSnapX !== null && currentSnapX !== lastSnapX) ||
+            (currentSnapY !== null && currentSnapY !== lastSnapY)) {
+            Haptics.impact({ style: ImpactStyle.Light }).catch(() => { })
+        }
+
+        lastSnapX = currentSnapX
+        lastSnapY = currentSnapY
 
         guides.value = newGuides
         return { x: newX, y: newY }
