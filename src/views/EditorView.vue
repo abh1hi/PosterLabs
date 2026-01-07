@@ -10,7 +10,7 @@ import Toolbar from '../components/UI/Toolbar.vue'
 import CanvasArea from '../components/Editor/CanvasArea.vue'
 
 import { 
-  LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save, MonitorDown,
+  LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save,
   Menu, Settings, LogOut, LayoutTemplate,
   Undo2, Redo2, Layers, Download, Cloud, CloudOff, Folder, Code2, User, ArrowLeft,
   PenTool, Move
@@ -129,19 +129,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt.value = e
   showInstallButton.value = true
 })
-
-const installApp = async () => {
-  if (!deferredPrompt.value) {
-      // Fallback or info
-      return
-  }
-  deferredPrompt.value.prompt()
-  const { outcome } = await deferredPrompt.value.userChoice
-  if (outcome === 'accepted') {
-    deferredPrompt.value = null
-    showInstallButton.value = false
-  }
-}
 
 const handleAppLogout = async () => {
     await logout()
