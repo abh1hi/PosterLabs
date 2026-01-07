@@ -57,6 +57,8 @@ export interface ElementStyle {
     skewY?: number
     borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double' | 'groove' | 'ridge' | 'inset' | 'outset'
     backgroundType?: 'solid' | 'gradient'
+    curve?: number
+    textGradient?: string
 }
 
 export interface CanvasElement {
@@ -73,6 +75,8 @@ export interface CanvasElement {
     hidden?: boolean
     locked?: boolean
     order?: number
+    pathData?: string
+    viewBox?: string
 }
 
 const elements = ref<CanvasElement[]>([])
@@ -111,6 +115,7 @@ export interface UseElementsReturn {
     deleteElement: (id: string) => void
     duplicateElement: (id: string) => void
     moveElement: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void
+    reorderElement: (id: string, newIndex: number) => void
     shuffleElements: () => void
     commitHistory: () => void
     undo: () => void
@@ -241,6 +246,28 @@ export function useElements(): UseElementsReturn {
 
         // Update order fields for all changed elements
         newElements.forEach((e: CanvasElement, i: number) => e.order = i)
+        elements.value = newElements
+        saveElements()
+    }
+
+    const reorderElement = (id: string, newIndex: number) => {
+        const currentIndex = elements.value.findIndex(e => e.id === id)
+        if (currentIndex === -1) return
+
+        const el = elements.value[currentIndex]
+        if (!el) return
+
+        const newElements = [...elements.value]
+
+        // Remove from old position
+        newElements.splice(currentIndex, 1)
+
+        // Insert at new position
+        // Ensure newIndex is within bounds
+        const targetIndex = Math.max(0, Math.min(newIndex, newElements.length))
+        newElements.splice(targetIndex, 0, el)
+
+        newElements.forEach((e, i) => e.order = i)
         elements.value = newElements
         saveElements()
     }
@@ -472,6 +499,7 @@ export function useElements(): UseElementsReturn {
         deleteElement,
         duplicateElement,
         moveElement,
+        reorderElement,
         shuffleElements,
         commitHistory,
         undo,

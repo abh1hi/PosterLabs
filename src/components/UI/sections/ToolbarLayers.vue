@@ -1,50 +1,42 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
-import { useElements } from '../../../composables/useElements' // Verified import
+import { useElements } from '../../../composables/useElements' 
 import { useCanvas } from '../../../composables/useCanvas'
 import { 
     Box, Type, ImageIcon, Lock, Eye, EyeOff, Unlock, 
-    ArrowDownToLine, ChevronDown, ChevronUp, ArrowUpToLine, 
-    Settings2, Copy, Trash2, Edit3, Target
+    ChevronDown, ChevronUp, 
+    Copy, Trash2, Edit3, Target, ChevronRight
 } from 'lucide-vue-next'
 
 import '@material/web/iconbutton/icon-button.js'
 
-const { elements, selectedId, updateElement, moveElement, duplicateElement, deleteElement } = useElements()
-const { activeTab, posterSize } = useCanvas() // posterSize needed
+const { elements, selectedIds, toggleSelection, updateElement, moveElement, duplicateElement, deleteElement, reorderElement } = useElements()
+const { posterSize } = useCanvas()
 
 const sortedLayers = computed(() => [...elements.value].reverse())
+const expandedGroups = ref(new Set<string>())
 
-// ...
+const toggleGroup = (id: string) => {
+    if (expandedGroups.value.has(id)) expandedGroups.value.delete(id)
+    else expandedGroups.value.add(id)
+}
 
+const handleLayerClick = (e: MouseEvent, id: string) => {
+    const multi = e.ctrlKey || e.metaKey || e.shiftKey
+    toggleSelection(id, multi)
+}
+
+// ... existing helpers (centerElement, renaming) ...
 const centerElement = (id: string) => {
     const el = elements.value.find(e => e.id === id)
     if (!el) return
-    
-    // Default width/height if not set? Text width is tricky without DOM.
-    // Ideally we rely on last known width/height.
-    // If width is auto (Text), centering might be slightly off if we don't know exact width.
-    // But RenderElement updates style.width? No, usually Text width is undefined or auto.
-    // Let's rely on standard logic: if width/height defined, use it. Else assume 0 offset?
-    // Actually, for Text, formatting it to center text align and moving to center X/Y might be best?
-    // For now, let's just use the bounding box logic if we had it.
-    // Since we don't have a robust "measure" function here without DOM access...
-    // We can just set X/Y to center and let the user adjust? 
-    // OR we center based on poster center:
-    
     const w = el.style.width || 0
     const h = el.style.height || 0
-    
     const newX = (posterSize.value.w - w) / 2
     const newY = (posterSize.value.h - h) / 2
-    
     updateElement(id, { x: newX, y: newY })
 }
 
-
-
-
-// Renaming Logic
 const editingId = ref<string | null>(null)
 const editName = ref('')
 
@@ -66,6 +58,25 @@ const saveName = (id: string) => {
     }
     editingId.value = null
 }
+
+const handleDragStart = (e: DragEvent, id: string) => {
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.dropEffect = 'move'
+        e.dataTransfer.setData('text/plain', id)
+    }
+}
+
+const handleDrop = (e: DragEvent, targetId: string) => {
+    e.preventDefault()
+    const draggedId = e.dataTransfer?.getData('text/plain')
+    if (draggedId && draggedId !== targetId) {
+        const targetIndex = elements.value.findIndex(el => el.id === targetId)
+        if (targetIndex !== -1) {
+             reorderElement(draggedId, targetIndex)
+        }
+    }
+}
 </script>
 
 <template>
@@ -77,15 +88,26 @@ const saveName = (id: string) => {
         
         <div v-else class="space-y-1">
             <div v-for="layer in sortedLayers" :key="layer.id" 
-                class="group relative flex flex-col bg-surface-lowest border border-outline/5 rounded-2xl overflow-hidden transition-all duration-300 hover:border-primary/30"
-                :class="{'ring-2 ring-primary border-transparent z-10': selectedId === layer.id}"
+                class="group relative flex flex-col bg-surface-lowest border border-outline/5 rounded-2xl overflow-hidden transition-all duration-300"
+                :class="{'ring-2 ring-primary border-transparent z-10': selectedIds.includes(layer.id), 'hover:border-primary/30': !selectedIds.includes(layer.id)}"
+                draggable="true"
+                @dragstart="handleDragStart($event, layer.id)"
+                @dragover.prevent
+                @drop="handleDrop($event, layer.id)"
             >
-                <div class="flex items-center gap-3 p-3 cursor-pointer" @click="selectedId = layer.id">
-                    <!-- Thumbnail/Type Icon -->
-                    <div class="w-10 h-10 rounded-lg bg-surface-high flex items-center justify-center shrink-0 border border-outline/5">
-                        <Type v-if="layer.type === 'text'" :size="18" class="text-on-surface-variant" />
-                        <ImageIcon v-else-if="layer.type === 'image'" :size="18" class="text-on-surface-variant" />
-                        <Box v-else :size="18" class="text-on-surface-variant" />
+                <div class="flex items-center gap-2 p-2 cursor-pointer" @click="handleLayerClick($event, layer.id)">
+                    
+                    <!-- Group Expand Toggle -->
+                    <button v-if="layer.type === 'group'" @click.stop="toggleGroup(layer.id)" class="p-1 hover:bg-surface-high rounded">
+                         <component :is="expandedGroups.has(layer.id) ? ChevronDown : ChevronRight" :size="14" class="text-on-surface-variant"/>
+                    </button>
+                    <div v-else class="w-6"></div> <!-- Spacer -->
+
+                    <!-- Thumbnail/Icon -->
+                    <div class="w-8 h-8 rounded-lg bg-surface-high flex items-center justify-center shrink-0 border border-outline/5">
+                        <Type v-if="layer.type === 'text'" :size="16" class="text-on-surface-variant" />
+                        <ImageIcon v-else-if="layer.type === 'image'" :size="16" class="text-on-surface-variant" />
+                        <Box v-else :size="16" class="text-on-surface-variant" />
                     </div>
 
                     <!-- Info -->
@@ -100,38 +122,41 @@ const saveName = (id: string) => {
                                 @click.stop
                                 class="bg-surface-variant text-on-surface px-1 py-0.5 rounded w-full text-xs font-bold outline-none border border-primary"
                             />
-                            <span v-else class="label-medium font-bold truncate select-none">{{ layer.name || layer.content || layer.type }}</span>
-                            
-                            <Lock v-if="layer.locked" :size="12" class="text-error/50" />
+                            <span v-else class="label-medium font-bold truncate select-none text-sm">{{ layer.name || layer.content || layer.type }}</span>
+                            <Lock v-if="layer.locked" :size="10" class="text-error/50" />
                         </div>
-                        <span v-if="editingId !== layer.id" class="label-small text-on-surface-variant/60 capitalize">{{ layer.type }}</span>
                     </div>
 
-                    <!-- Visibility & Quick Lock -->
-                    <div class="flex items-center">
-                        <md-icon-button @click.stop="updateElement(layer.id, { hidden: !layer.hidden })" class="w-8 h-8">
-                            <Eye v-if="!layer.hidden" :size="16" /><EyeOff v-else :size="16" />
-                        </md-icon-button>
-                        <md-icon-button @click.stop="updateElement(layer.id, { locked: !layer.locked })" class="w-8 h-8">
-                            <Lock v-if="layer.locked" :size="16" class="text-error" /><Unlock v-else :size="16" />
-                        </md-icon-button>
+                    <!-- Visibility & Lock -->
+                    <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100': selectedIds.includes(layer.id)}">
+                        <button @click.stop="updateElement(layer.id, { hidden: !layer.hidden })" class="p-1 hover:bg-surface-high rounded" title="Toggle Visibility">
+                            <Eye v-if="!layer.hidden" :size="14" /><EyeOff v-else :size="14" />
+                        </button>
+                        <button @click.stop="updateElement(layer.id, { locked: !layer.locked })" class="p-1 hover:bg-surface-high rounded" title="Toggle Lock">
+                            <Unlock v-if="!layer.locked" :size="14" /><Lock v-else :size="14" class="text-error" />
+                        </button>
                     </div>
                 </div>
 
-                <!-- Expansion Area for Selected Layer -->
-                <div v-if="selectedId === layer.id" class="bg-surface-high/50 border-t border-outline/5 p-2 flex items-center justify-between gap-1 animate-in slide-in-from-top-2 overflow-x-auto scrollbar-hide">
+                <!-- Children (Tree View) -->
+                <div v-if="layer.type === 'group' && expandedGroups.has(layer.id)" class="pl-8 pr-2 pb-2 space-y-1 bg-surface-high/10 border-t border-outline/5">
+                     <div v-for="child in layer.children" :key="child.id" class="flex items-center gap-2 p-1.5 rounded-lg opacity-80 hover:bg-surface-high/30">
+                          <div class="w-6 h-6 rounded bg-surface-high flex items-center justify-center shrink-0"><Box :size="12"/></div>
+                          <span class="text-xs truncate flex-1">{{ child.name || child.type }}</span>
+                     </div>
+                </div>
+
+                <!-- Actions (Only show for single selection to avoid clutter) -->
+                <div v-if="selectedIds.includes(layer.id) && selectedIds.length === 1" class="bg-surface-high/50 border-t border-outline/5 p-1.5 flex items-center justify-between gap-1 overflow-x-auto scrollbar-hide">
                     <div class="flex items-center gap-1 shrink-0">
-                        <md-icon-button @click.stop="centerElement(layer.id)" title="Result in Canvas (Center)"><Target :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="moveElement(layer.id, 'bottom')" title="Send to Back"><ArrowDownToLine :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="moveElement(layer.id, 'down')" title="Move Backward"><ChevronDown :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="moveElement(layer.id, 'up')" title="Move Forward"><ChevronUp :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="moveElement(layer.id, 'top')" title="Bring to Front"><ArrowUpToLine :size="14" /></md-icon-button>
+                        <button @click.stop="centerElement(layer.id)" class="p-1.5 hover:bg-surface-variant rounded" title="Center"><Target :size="14" /></button>
+                        <button @click.stop="moveElement(layer.id, 'up')" class="p-1.5 hover:bg-surface-variant rounded" title="Up"><ChevronUp :size="14" /></button>
+                        <button @click.stop="moveElement(layer.id, 'down')" class="p-1.5 hover:bg-surface-variant rounded" title="Down"><ChevronDown :size="14" /></button>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
-                        <md-icon-button @click.stop="startRenaming(layer.id, layer.name || layer.type)" title="Rename Layer"><Edit3 :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="activeTab = 'properties'" title="Edit Properties"><Settings2 :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="duplicateElement(layer.id)" title="Duplicate"><Copy :size="14" /></md-icon-button>
-                        <md-icon-button @click.stop="deleteElement(layer.id)" class="text-error" title="Delete"><Trash2 :size="14" /></md-icon-button>
+                        <button @click.stop="startRenaming(layer.id, layer.name || layer.type)" class="p-1.5 hover:bg-surface-variant rounded" title="Rename"><Edit3 :size="14" /></button>
+                        <button @click.stop="duplicateElement(layer.id)" class="p-1.5 hover:bg-surface-variant rounded" title="Duplicate"><Copy :size="14" /></button>
+                        <button @click.stop="deleteElement(layer.id)" class="p-1.5 hover:bg-error/20 text-error rounded" title="Delete"><Trash2 :size="14" /></button>
                     </div>
                 </div>
             </div>

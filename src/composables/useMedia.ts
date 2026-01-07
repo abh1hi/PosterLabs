@@ -11,10 +11,16 @@ export interface MediaItem {
     createdAt: any
 }
 
+// Singleton State
+const uploads = ref<MediaItem[]>([])
+const isUploading = ref(false)
+const savedElements = ref<any[]>([])
+const categories = ref<string[]>([])
+const isInitialized = ref(false)
+
 export function useMedia() {
     const { showToast } = useToasts()
-    const uploads = ref<MediaItem[]>([])
-    const isUploading = ref(false)
+
 
     const uploadImage = async (file: File) => {
         isUploading.value = true
@@ -94,8 +100,7 @@ export function useMedia() {
     }
 
     // --- Saved Elements (Assets) ---
-    const savedElements = ref<any[]>([])
-    const categories = ref<string[]>([])
+    // (State is now global)
 
     const refreshSavedElements = () => {
         const saved = localStorage.getItem('posterlab_saved_elements')
@@ -125,6 +130,13 @@ export function useMedia() {
 
     const saveCategories = () => {
         localStorage.setItem('posterlab_asset_categories', JSON.stringify(categories.value))
+    }
+
+    // Init (Singleton)
+    if (!isInitialized.value) {
+        refreshMedia()
+        refreshSavedElements()
+        isInitialized.value = true
     }
 
     const createCategory = (name: string) => {
@@ -235,8 +247,7 @@ export function useMedia() {
         }
     }
 
-    // Init
-    refreshSavedElements()
+    // Init handled by isInitialized check above
 
     return {
         uploads,

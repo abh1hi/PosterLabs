@@ -21,6 +21,14 @@ const backgroundType = ref<'solid' | 'gradient'>('solid')
 const gradientStyle = ref('linear-gradient(135deg, #ffffff 0%, #000000 100%)')
 const showGrid = ref(false)
 
+// Drawing State
+const isDrawing = ref(false)
+const brushSettings = ref({
+    size: 5,
+    color: '#000000',
+    opacity: 1
+})
+
 export const CANVAS_PRESETS = [
     { name: 'Custom', w: 1080, h: 1080 },
     { name: 'Instagram Post', w: 1080, h: 1080 },
@@ -100,6 +108,8 @@ export function useCanvas() {
         activeTab,
         backgroundType,
         gradientStyle,
-        showGrid
+        showGrid,
+        isDrawing,
+        brushSettings
     }
 }

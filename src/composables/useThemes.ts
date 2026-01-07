@@ -21,6 +21,12 @@ export interface Theme {
             letterSpacing: string
             textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
         }
+        subheading: {
+            fontFamily: string
+            fontWeight: string
+            letterSpacing: string
+            textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+        }
         body: {
             fontFamily: string
             fontWeight: string
@@ -34,6 +40,8 @@ export interface Theme {
         borderRadius: number
         borderWidth?: number
     }
+    // Brand Assets
+    logos?: string[] // Array of image URLs (base64 or remote)
 }
 
 const DEFAULT_THEMES: Theme[] = [
@@ -49,6 +57,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'Inter', fontWeight: '700', letterSpacing: '-1px', textTransform: 'none' },
+            subheading: { fontFamily: 'Inter', fontWeight: '600', letterSpacing: '-0.5px', textTransform: 'none' },
             body: { fontFamily: 'Roboto', fontWeight: '400', letterSpacing: '0px', lineHeight: 1.5 }
         },
         styles: { borderRadius: 16 }
@@ -65,6 +74,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'Playfair Display', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' },
+            subheading: { fontFamily: 'Playfair Display', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' },
             body: { fontFamily: 'Courier New', fontWeight: '400', letterSpacing: '0px', lineHeight: 1.4 }
         },
         styles: { borderRadius: 0, borderWidth: 2 }
@@ -81,6 +91,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'Merriweather', fontWeight: '700', letterSpacing: '-0.5px', textTransform: 'capitalize' },
+            subheading: { fontFamily: 'Merriweather', fontWeight: '600', letterSpacing: '0px', textTransform: 'capitalize' },
             body: { fontFamily: 'Lato', fontWeight: '400', letterSpacing: '0px', lineHeight: 1.6 }
         },
         styles: { borderRadius: 8 }
@@ -97,6 +108,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'Orbitron', fontWeight: '700', letterSpacing: '2px', textTransform: 'uppercase' },
+            subheading: { fontFamily: 'Orbitron', fontWeight: '500', letterSpacing: '1px', textTransform: 'uppercase' },
             body: { fontFamily: 'Rajdhani', fontWeight: '500', letterSpacing: '1px', lineHeight: 1.4 }
         },
         styles: { borderRadius: 4, borderWidth: 1 }
@@ -113,6 +125,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'Montserrat', fontWeight: '800', letterSpacing: '-0.5px', textTransform: 'uppercase' },
+            subheading: { fontFamily: 'Montserrat', fontWeight: '600', letterSpacing: '0px', textTransform: 'uppercase' },
             body: { fontFamily: 'Open Sans', fontWeight: '400', letterSpacing: '0px', lineHeight: 1.5 }
         },
         styles: { borderRadius: 12 }
@@ -129,6 +142,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'Lobster', fontWeight: '400', letterSpacing: '1px', textTransform: 'none' },
+            subheading: { fontFamily: 'Raleway', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'none' },
             body: { fontFamily: 'Raleway', fontWeight: '400', letterSpacing: '0.5px', lineHeight: 1.5 }
         },
         styles: { borderRadius: 24 }
@@ -145,6 +159,7 @@ const DEFAULT_THEMES: Theme[] = [
         },
         typography: {
             heading: { fontFamily: 'DM Sans', fontWeight: '700', letterSpacing: '-0.5px', textTransform: 'none' },
+            subheading: { fontFamily: 'DM Sans', fontWeight: '500', letterSpacing: '-0.2px', textTransform: 'none' },
             body: { fontFamily: 'DM Sans', fontWeight: '400', letterSpacing: '0px', lineHeight: 1.5 }
         },
         styles: { borderRadius: 0, borderWidth: 1 }
@@ -185,16 +200,22 @@ export function useThemes() {
             const updates: any = { style: { ...el.style } }
 
             if (el.type === 'text') {
-                // Heuristic: Heading vs Body
-                const isHeading = (el.style.fontSize || 16) > 40
+                // Heuristic: Heading (>40), Subheading (24-40), Body (<24)
+                const fontSize = el.style.fontSize || 16
+                const isHeading = fontSize > 40
+                const isSubheading = fontSize > 24 && fontSize <= 40
 
-                // Fallback for old themes without 'typography' field
+                // Fallback for old themes
                 const typo = theme.typography || {
                     heading: { fontFamily: theme.fonts?.heading || 'Inter', fontWeight: '700', letterSpacing: '0px', textTransform: 'none' },
+                    subheading: { fontFamily: theme.fonts?.heading || 'Inter', fontWeight: '600', letterSpacing: '0px', textTransform: 'none' },
                     body: { fontFamily: theme.fonts?.body || 'Roboto', fontWeight: '400', letterSpacing: '0px', lineHeight: 1.5 }
                 }
 
-                const fontSettings = isHeading ? typo.heading : typo.body
+                let fontSettings
+                if (isHeading) fontSettings = typo.heading
+                else if (isSubheading) fontSettings = typo.subheading
+                else fontSettings = typo.body
 
                 updates.style.fontFamily = fontSettings.fontFamily
                 updates.style.fontWeight = fontSettings.fontWeight

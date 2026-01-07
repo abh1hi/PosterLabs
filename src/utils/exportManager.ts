@@ -7,7 +7,13 @@ export const exportCanvas = async (elementId: string, format: ExportFormat, file
     if (!element) throw new Error('Canvas element not found');
 
     try {
-        const options = { quality: 0.95, backgroundColor: '#ffffff' };
+        const options = {
+            quality: 0.95,
+            backgroundColor: '#ffffff',
+            cacheBust: true,  // Forces new request to bypass cached CORS issues
+            skipOnError: true, // Continues even if an image fails to load
+            pixelRatio: 2      // Higher resolution export
+        };
         let dataUrl = '';
 
         if (format === 'png') {

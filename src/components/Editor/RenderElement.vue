@@ -4,7 +4,8 @@ import { useElements, type CanvasElement } from '../../composables/useElements'
 import { useTransform } from '../../composables/useTransform'
 import { useCanvas } from '../../composables/useCanvas'
 import { 
-  Copy, Trash2, RotateCcw, Move, X, Lock, Unlock, Settings2
+  Copy, Trash2, RotateCcw, Lock, Unlock, Settings2,
+  ArrowUpToLine, ArrowDownToLine, ArrowUp, ArrowDown 
 } from 'lucide-vue-next'
 import '@material/web/iconbutton/icon-button.js'
 
@@ -15,10 +16,11 @@ defineOptions({
 const props = defineProps<{
     element: CanvasElement,
     isChild?: boolean,
-    parentId?: string
+    parentId?: string,
+    isPreview?: boolean
 }>()
 
-const { selectedIds, updateElement, deleteElement, duplicateElement, toggleSelection } = useElements()
+const { selectedIds, updateElement, deleteElement, duplicateElement, toggleSelection, moveElement } = useElements()
 const { startTransform } = useTransform()
 const { activeTab, isToolbarOpen } = useCanvas()
 
@@ -130,7 +132,7 @@ const getStrokeDash = (style?: string) => {
 <template>
   <div 
     class="element-container group"
-    :class="{ 'is-selected': isSelected, 'is-locked': element.locked }"
+    :class="{ 'is-selected': isSelected, 'is-locked': element.locked, 'preview-active': isPreview }"
     :style="elementStyle"
     @mousedown="handleSelect"
     @touchstart="handleSelect"
@@ -142,7 +144,43 @@ const getStrokeDash = (style?: string) => {
         :style="innerStyle"
     >
         <template v-if="element.type === 'text'">
-            <div class="whitespace-pre-wrap outline-none">{{ element.content }}</div>
+            <!-- Curved Text (SVG) -->
+            <div v-if="element.style.curve && element.style.curve !== 0" class="w-full h-full overflow-visible">
+                 <svg viewBox="0 0 200 100" overflow="visible" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                         <!-- Dynamic Path based on Curve Value (-100 to 100) -->
+                         <!-- Curve > 0: Arch Up (Sad mouth), Curve < 0: Arch Down (Smile) 
+                              Standard SVG coords: Y goes down.
+                              So Cy < y means Control point above. 
+                         -->
+                         <path :id="'curve-' + element.id" 
+                            :d="`M 0 50 Q 100 ${50 + (element.style.curve * 1.5)} 200 50`" 
+                            fill="transparent" />
+                    </defs>
+                    <text 
+                        fill="currentColor"
+                        :style="{ fill: element.style.color || '#000000', fontSize: '20px', fontFamily: element.style.fontFamily, fontWeight: element.style.fontWeight, fontStyle: element.style.fontStyle }"
+                        text-anchor="middle"
+                    >
+                        <textPath :href="'#curve-' + element.id" startOffset="50%">
+                            {{ element.content }}
+                        </textPath>
+                    </text>
+                 </svg>
+            </div>
+
+            <!-- Standard Text (Div) -->
+            <div v-else 
+                class="whitespace-pre-wrap outline-none"
+                :class="{ 'gradient-text': !!element.style.textGradient }"
+                :style="{
+                    ...innerStyle,
+                    backgroundImage: element.style.textGradient ? element.style.textGradient : undefined,
+                    color: element.style.textGradient ? 'transparent' : innerStyle.color,
+                    backgroundClip: element.style.textGradient ? 'text' : undefined,
+                    WebkitBackgroundClip: element.style.textGradient ? 'text' : undefined
+                }"
+            >{{ element.content }}</div>
         </template>
         
         <template v-else-if="element.type === 'image'">
@@ -159,6 +197,7 @@ const getStrokeDash = (style?: string) => {
             <img 
                 v-else 
                 :src="element.src" 
+                crossorigin="anonymous"
                 class="w-full h-full object-contain pointer-events-none transition-all" 
                 :style="{ borderRadius: innerStyle.borderRadius }"
             />
@@ -168,55 +207,22 @@ const getStrokeDash = (style?: string) => {
             <div class="w-full h-full transition-all overflow-hidden" 
                  :style="{ 
                     borderRadius: innerStyle.borderRadius,
-                    border: `${element.style.borderWidth}px ${element.style.borderStyle || 'solid'} ${element.style.borderColor}`,
-                    background: element.style.backgroundColor || '#0061a4',
-                    clipPath: element.style.shapeType === 'circle' ? 'circle(50% at 50% 50%)' :
+                    border: element.pathData ? 'none' : `${element.style.borderWidth}px ${element.style.borderStyle || 'solid'} ${element.style.borderColor}`,
+                    background: element.pathData ? 'transparent' : (element.style.backgroundColor || '#0061a4'),
+                    clipPath: !element.pathData && element.style.shapeType ? (
+                              element.style.shapeType === 'circle' ? 'circle(50% at 50% 50%)' :
                               element.style.shapeType === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' :
                               element.style.shapeType === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
-                              element.style.shapeType === 'heart' ? 'path(\'M 10,30 A 20,20 0,0,1 50,30 A 20,20 0,0,1 90,30 Q 90,60 50,90 Q 10,60 10,30 z\')' : // Basic Heart attempt via path or SVG? path() in clip-path is experimental but widespread.
+                              element.style.shapeType === 'heart' ? 'path(\'M 10,30 A 20,20 0,0,1 50,30 A 20,20 0,0,1 90,30 Q 90,60 50,90 Q 10,60 10,30 z\')' :
                               element.style.shapeType === 'pentagon' ? 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)' :
                               element.style.shapeType === 'hexagon' ? 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' :
                               element.style.shapeType === 'octagon' ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' :
-                              undefined
+                              undefined) : undefined
                  }"
             >
-                <!-- For SVG/Path based clip-paths like Heart, it might be safer to use SVG + mask for cross browser if path() isn't fully supported, but modern Chrome supports path(). Let's stick to polygon for now. Heart is hard with polygon. 
-                     Actually, for 'Star' and 'Heart', SVG is still safer IF we want complex curves. 
-                     BUT, if we want gradients, 'background' on the DIV is best.
-                     Let's use ::before/::after or just the div.
-                     
-                     Note regarding Border on clipped shapes: 
-                     CSS Borders are CLIPPED OUT if we use clip-path!
-                     Solution: Nested Divs. Outer div has size. Inner div has background + clip-path.
-                     But where does the border go? 
-                     Border on shapes like Star is hard with CSS borders. 
-                     We might need to render an SVG STROKE for the border if it's a star.
-                     
-                     Let's revert to SVG for shapes if we want borders? 
-                     OR use drop-shadow filter hack for borders?
-                     
-                     Let's try a hybrid:
-                     If specific shape, use SVG.
-                     If rectangle/circle, use CSS.
-                     
-                     Wait, key requirement is GRADIENT support.
-                     SVG fills accept IDs -> <linearGradient>.
-                     
-                     If we want to keep it simple: define standard Defs for gradients?
-                     Or use 'mask'.
-                     
-                     Let's stick to the previous SVG implementation but clean it up for gradients?
-                     Actually, user wants "Advance Manipulation" like gradients. 
-                     Let's try using a `foreignObject` or simply mapped SVG styles.
-                     
-                     Let's stick to the requested Clip Path Refactor, but be aware of border limitations.
-                     Border on a Star needs to be an SVG stroke.
-                -->
                 
-                <!-- Improved Shape Rendering -->
-                <!-- We use mask-image if possible for best support, or SVG -->
-                
-                 <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible">
+                 <!-- SVG Renderer for Shapes & Paths -->
+                  <svg :viewBox="element.viewBox || (element.pathData ? `0 0 ${element.style.width} ${element.style.height}` : '0 0 100 100')" class="w-full h-full overflow-visible" preserveAspectRatio="none">
                     <defs>
                         <linearGradient v-if="element.style.backgroundType === 'gradient'" :id="'grad-' + element.id" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" :stop-color="element.style.backgroundColor || '#0061a4'" />
@@ -224,7 +230,18 @@ const getStrokeDash = (style?: string) => {
                         </linearGradient>
                     </defs>
                     
-                    <path 
+                    <!-- Freehand Path -->
+                    <path v-if="element.pathData"
+                        :d="element.pathData"
+                        fill="none"
+                        :stroke="element.style.borderColor || '#000'"
+                        :stroke-width="element.style.borderWidth || 2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+
+                    <!-- Standard Shape (Fallback or Specific) -->
+                    <path v-else-if="element.style.shapeType"
                         :d="getShapePath(element.style.shapeType)" 
                         :fill="element.style.backgroundType === 'gradient' ? `url(#grad-${element.id})` : (element.style.backgroundColor || '#0061a4')"
                         :stroke="element.style.borderColor || 'transparent'"
@@ -261,37 +278,73 @@ const getStrokeDash = (style?: string) => {
     </div>
 
     <!-- M3 Selection UI & Controls -->
-    <template v-if="isSelected && !element.locked">
+    <template v-if="isSelected && !element.locked && !isPreview">
         <!-- Selection Border -->
-        <div class="absolute inset-[-4px] border-2 border-primary rounded-lg pointer-events-none shadow-[0_0_15px_rgba(var(--md-sys-color-primary-rgb),0.3)]"></div>
+        <div class="absolute inset-[-2px] border-2 border-primary pointer-events-none z-[60]"></div>
         
-        <!-- Action Pill (Floating Top) -->
-        <div class="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-surface-high border border-outline/10 p-1.5 rounded-full shadow-xl z-[70] animate-in zoom-in-95 duration-200">
-            <button class="control-btn" @click.stop="openProperties" title="Edit Properties"><Settings2 :size="16" /></button>
-            <div class="w-px h-4 bg-outline/20 mx-1"></div>
-            <button class="control-btn" @click.stop="duplicateElement(element.id)" title="Duplicate"><Copy :size="16" /></button>
-            <div class="w-px h-4 bg-outline/20 mx-1"></div>
-            <button class="control-btn" @click.stop="toggleLock" title="Lock"><Unlock :size="16" /></button>
-            <button class="control-btn danger" @click.stop="deleteElement(element.id)" title="Delete"><Trash2 :size="16" /></button>
-            <div class="w-px h-4 bg-outline/20 mx-1"></div>
-            <button class="control-btn" @click.stop="toggleSelection(element.id, true)" title="Deselect"><X :size="16" /></button>
+        <!-- Action Bar (Floating Top - Expanded & High Visibility) -->
+        <div class="absolute -top-14 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-[70]" @mousedown.stop @touchstart.stop @click.stop>
+            
+            <!-- Main Toolbar -->
+            <div class="flex items-center gap-1 bg-surface-dummy text-on-surface p-1.5 rounded-full shadow-2xl border border-outline/10 backdrop-blur-md bg-white/90 dark:bg-zinc-800/90 ring-1 ring-black/5">
+                
+                <!-- Primary Actions -->
+                <button class="control-btn" @click.stop="openProperties" title="Properties">
+                    <Settings2 :size="18" />
+                </button>
+                <button class="control-btn" @click.stop="duplicateElement(element.id)" title="Duplicate">
+                    <Copy :size="18" />
+                </button>
+                
+                <div class="w-px h-5 bg-outline/20 mx-1"></div>
+
+                <!-- Layer Controls -->
+                <button class="control-btn" @click.stop="moveElement(element.id, 'top')" title="Bring to Front">
+                    <ArrowUpToLine :size="18" />
+                </button>
+                <button class="control-btn" @click.stop="moveElement(element.id, 'up')" title="Bring Forward">
+                    <ArrowUp :size="18" />
+                </button>
+                <button class="control-btn" @click.stop="moveElement(element.id, 'down')" title="Send Backward">
+                    <ArrowDown :size="18" />
+                </button>
+                <button class="control-btn" @click.stop="moveElement(element.id, 'bottom')" title="Send to Back">
+                    <ArrowDownToLine :size="18" />
+                </button>
+
+                <div class="w-px h-5 bg-outline/20 mx-1"></div>
+
+                <!-- State Actions -->
+                 <button class="control-btn" @click.stop="toggleLock" :title="element.locked ? 'Unlock' : 'Lock'">
+                    <component :is="element.locked ? Lock : Unlock" :size="18" />
+                </button>
+                <button class="control-btn danger" @click.stop="deleteElement(element.id)" title="Delete">
+                    <Trash2 :size="18" class="text-error" />
+                </button>
+            </div>
         </div>
 
-        <!-- Corner Resize Handles (M3 Style) -->
+        <!-- Rotation Handle (Lollipop) -->
+        <div class="absolute left-1/2 bottom-[-24px] -translate-x-1/2 flex flex-col items-center group/rotate z-[60] cursor-grab active:cursor-grabbing"
+             @mousedown.stop="startTransform(element.id, 'rotate', $event)" 
+             @touchstart.stop="startTransform(element.id, 'rotate', $event)">
+             <div class="w-px h-4 bg-primary"></div>
+             <div class="w-5 h-5 bg-white border-2 border-primary rounded-full shadow-sm hover:scale-110 transition-transform flex items-center justify-center">
+                 <RotateCcw :size="10" class="text-primary opacity-0 group-hover/rotate:opacity-100 transition-opacity duration-200"/>
+             </div>
+        </div>
+
+        <!-- Corner Resize Handles -->
         <div class="handle top-left" @mousedown.stop="startTransform(element.id, 'resize', $event, 'tl')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'tl')"></div>
         <div class="handle top-right" @mousedown.stop="startTransform(element.id, 'resize', $event, 'tr')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'tr')"></div>
         <div class="handle bottom-left" @mousedown.stop="startTransform(element.id, 'resize', $event, 'bl')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'bl')"></div>
         <div class="handle bottom-right" @mousedown.stop="startTransform(element.id, 'resize', $event, 'br')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'br')"></div>
 
-        <!-- Float-Bottom Action Buttons -->
-        <div class="absolute -bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-[70]">
-            <div class="action-circle secondary" @mousedown.stop="startTransform(element.id, 'rotate', $event)" @touchstart.stop="startTransform(element.id, 'rotate', $event)" title="Rotate">
-                <RotateCcw :size="24" />
-            </div>
-            <div class="action-circle primary" @mousedown.stop="startTransform(element.id, 'move', $event)" @touchstart.stop="startTransform(element.id, 'move', $event)" title="Drag to Move">
-                <Move :size="28" />
-            </div>
-        </div>
+        <!-- Side Resize Handles (Pill Shaped) -->
+        <div class="handle-side top-mid" @mousedown.stop="startTransform(element.id, 'resize', $event, 't')" @touchstart.stop="startTransform(element.id, 'resize', $event, 't')"></div>
+        <div class="handle-side bottom-mid" @mousedown.stop="startTransform(element.id, 'resize', $event, 'b')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'b')"></div>
+        <div class="handle-side left-mid" @mousedown.stop="startTransform(element.id, 'resize', $event, 'l')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'l')"></div>
+        <div class="handle-side right-mid" @mousedown.stop="startTransform(element.id, 'resize', $event, 'r')" @touchstart.stop="startTransform(element.id, 'resize', $event, 'r')"></div>
     </template>
 
     <!-- Locked Indicator -->
@@ -308,35 +361,40 @@ const getStrokeDash = (style?: string) => {
 .element-container { cursor: pointer; transition: opacity 0.2s; }
 .element-container.is-selected { cursor: move; }
 .element-container.is-locked { cursor: not-allowed; }
+/* Hover Effect for non-selected items */
+.element-container:not(.is-selected):not(.preview-active):hover {
+    outline: 1px solid var(--md-sys-color-primary); 
+}
 
 .control-btn {
-  @apply w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-highest transition-colors text-on-surface-variant;
+  @apply w-9 h-9 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors text-neutral-700 dark:text-neutral-200;
 }
-.control-btn.danger:hover { @apply text-error bg-error/10; }
+.control-btn.danger:hover { @apply text-red-500 bg-red-50 dark:bg-red-900/20; }
 
+/* Corner Handles */
 .handle {
-  /* Increased from w-4 h-4 (16px) to w-6 h-6 (24px) for better touch targets */
-  @apply absolute w-6 h-6 bg-white border-2 border-primary rounded-full z-40 cursor-nwse-resize shadow-md active:scale-110 hover:scale-110 transition-transform pointer-events-auto;
-  /* Add explicit large touch target via pseudo-element if needed, but 24px visual is good start */
+  @apply absolute w-3 h-3 bg-white border border-primary rounded-full z-[65] shadow-sm pointer-events-auto transition-transform hover:scale-125;
 }
-.handle::after {
-    content: '';
-    @apply absolute -top-4 -bottom-4 -left-4 -right-4; /* Expand hit area by 16px on all sides */
-}
-.top-left { top: -12px; left: -12px; cursor: nwse-resize; }
-.top-right { top: -12px; right: -12px; cursor: nesw-resize; }
-.bottom-left { bottom: -12px; left: -12px; cursor: nesw-resize; }
-.bottom-right { bottom: -12px; right: -12px; cursor: nwse-resize; }
+.handle::after { content: ''; @apply absolute -inset-2; } /* Touch target */
 
-.action-circle {
-  @apply w-16 h-16 rounded-full flex items-center justify-center shadow-2xl cursor-grab transition-transform active:scale-95 border-4 border-white dark:border-surface;
+.top-left { top: -6px; left: -6px; cursor: nwse-resize; }
+.top-right { top: -6px; right: -6px; cursor: nesw-resize; }
+.bottom-left { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+/* Side Handles (Pills) */
+.handle-side {
+    @apply absolute bg-white border border-primary rounded-full z-[64] shadow-sm pointer-events-auto hover:scale-110 transition-transform;
 }
-.action-circle.primary { @apply bg-primary text-on-primary; }
-.action-circle.secondary { @apply bg-secondary-container text-on-secondary-container; }
+.handle-side::after { content: ''; @apply absolute -inset-2; }
+
+.top-mid { top: -4px; left: 50%; translate: -50% 0; width: 12px; height: 4px; cursor: ns-resize; }
+.bottom-mid { bottom: -4px; left: 50%; translate: -50% 0; width: 12px; height: 4px; cursor: ns-resize; }
+.left-mid { top: 50%; left: -4px; translate: 0 -50%; width: 4px; height: 12px; cursor: ew-resize; }
+.right-mid { top: 50%; right: -4px; translate: 0 -50%; width: 4px; height: 12px; cursor: ew-resize; }
 
 .text-primary { color: var(--md-sys-color-primary); }
 .bg-primary { background-color: var(--md-sys-color-primary); }
 .border-primary { border-color: var(--md-sys-color-primary); }
-.text-error { color: var(--md-sys-color-error); }
 .bg-surface-high { background-color: var(--md-sys-color-surface-container-high); }
 </style>

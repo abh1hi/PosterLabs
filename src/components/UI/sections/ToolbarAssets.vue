@@ -165,6 +165,15 @@ const addMediaByUrl = async () => {
         showToast('Invalid URL', 'error')
     }
 }
+const openSections = ref<string[]>(['saved', 'uploads'])
+
+const toggleSection = (section: string) => {
+    if (openSections.value.includes(section)) {
+        openSections.value = openSections.value.filter(s => s !== section)
+    } else {
+        openSections.value.push(section)
+    }
+}
 </script>
 
 <template>
@@ -208,158 +217,177 @@ const addMediaByUrl = async () => {
              </button>
          </div>
 
-        <!-- Header / Upload Actions -->
+        <!-- Header / Upload Actions (Always Visible) -->
         <div class="space-y-3">
-             <h3 class="label-large text-on-surface-variant uppercase tracking-widest px-2">Uploads</h3>
              <div class="grid grid-cols-2 gap-3">
-                <button @click="fileInputRef?.click()" class="py-6 bg-primary-container/20 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-primary-container transition-colors cursor-pointer border border-dashed border-primary/30 group">
-                    <div v-if="isUploading" class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <div v-else class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors text-primary">
-                        <Plus :size="20" />
+                <button @click="fileInputRef?.click()" class="py-4 bg-primary-container/20 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-primary-container transition-colors cursor-pointer border border-dashed border-primary/30 group">
+                    <div v-if="isUploading" class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <div v-else class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors text-primary">
+                        <Plus :size="16" />
                     </div>
-                    <span class="label-medium font-bold text-primary">Upload Image</span>
+                    <span class="label-small font-bold text-primary">Upload</span>
                 </button>
-                <button @click="addMediaByUrl" class="py-6 bg-surface-high rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-secondary-container transition-colors cursor-pointer border border-dashed border-outline/20 group">
-                    <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors text-secondary">
-                        <Link :size="20" />
+                <button @click="addMediaByUrl" class="py-4 bg-surface-high rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-secondary-container transition-colors cursor-pointer border border-dashed border-outline/20 group">
+                    <div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors text-secondary">
+                        <Link :size="16" />
                     </div>
-                    <span class="label-medium font-bold text-secondary">Add from URL</span>
+                    <span class="label-small font-bold text-secondary">From URL</span>
                 </button>
              </div>
              <input type="file" hidden ref="fileInputRef" accept="image/*" @change="handleImageUpload" />
         </div>
 
-        <!-- Saved Elements (Kanban Board) -->
-        <div class="space-y-4"> 
-            <div class="flex items-center justify-between px-2">
-                <h3 class="label-large text-on-surface-variant uppercase tracking-widest">Saved Assets</h3>
-                <div class="flex items-center gap-1">
+        <!-- Saved Assets Accordion -->
+        <div class="border border-outline/10 rounded-2xl overflow-hidden bg-surface-high/10">
+            <button 
+                @click="toggleSection('saved')" 
+                class="w-full flex items-center justify-between p-3 hover:bg-surface-high/30 transition-colors"
+            >
+                <div class="flex items-center gap-2">
+                    <component :is="openSections.includes('saved') ? ChevronDown : ChevronRight" :size="18" class="text-on-surface-variant" />
+                    <span class="label-medium font-bold text-on-surface">Saved Assets</span>
+                </div>
+                 <div class="flex items-center gap-1" @click.stop>
                      <button @click="isCreatingCategory = !isCreatingCategory" class="p-1.5 hover:bg-surface-high rounded-lg text-primary transition-colors" title="New Column">
-                         <FolderPlus :size="16" />
+                         <FolderPlus :size="14" />
                      </button>
                      <button @click="exportAssets" class="p-1.5 hover:bg-surface-high rounded-lg text-primary transition-colors" title="Export JSON">
-                         <Download :size="16" />
+                         <Download :size="14" />
                      </button>
                      <button @click="jsonInputRef?.click()" class="p-1.5 hover:bg-surface-high rounded-lg text-primary transition-colors" title="Import JSON">
-                         <Upload :size="16" />
+                         <Upload :size="14" />
                      </button>
-                </div>
-            </div>
-            <input type="file" hidden ref="jsonInputRef" accept=".json" @change="handleJsonImport" />
-
-            <!-- New Category Input -->
-            <div v-if="isCreatingCategory" class="px-2 flex gap-2">
-                <input v-model="newCategoryName" @keyup.enter="handleCreateCategory" placeholder="Column Name" class="flex-1 bg-surface-high border border-outline/10 rounded-lg px-3 py-2 text-xs focus:border-primary outline-none" autoFocus />
-                <button @click="handleCreateCategory" class="px-3 bg-primary text-on-primary rounded-lg text-xs font-bold">Add</button>
-            </div>
-
-            <div v-if="savedElements.length === 0" class="p-4 text-center text-on-surface-variant/50 text-xs italic">
-                No saved assets. Select an element on canvas to save it.
-            </div>
+                 </div>
+            </button>
             
-            <!-- Kanban Columns Container -->
-             <div class="flex flex-nowrap overflow-x-auto gap-3 pb-4 px-2 min-h-[300px] items-start snap-x">
-                <div 
-                    v-for="cat in categories" 
-                    :key="cat" 
-                    class="kanban-column shrink-0 snap-start transition-all duration-300 border border-outline/10 rounded-xl bg-surface-high/20 flex flex-col overflow-hidden"
-                    :class="collapsedCategories.includes(cat) ? 'w-10' : 'w-48'"
-                    @dragover.prevent
-                    @drop="onDrop($event, cat)"
-                >
-                    <!-- Header -->
-                    <div 
-                        @click="toggleCategory(cat)" 
-                        class="p-2 cursor-pointer hover:bg-surface-high/50 transition-colors border-b border-outline/5 flex items-center"
-                        :class="collapsedCategories.includes(cat) ? 'flex-col gap-2 justify-start h-full py-4' : 'justify-between'"
-                    >
-                        <div class="flex items-center gap-2" :class="{ 'flex-col vertical-text': collapsedCategories.includes(cat) }">
-                            <component :is="collapsedCategories.includes(cat) ? ChevronRight : ChevronDown" :size="16" class="text-on-surface-variant shrink-0" />
-                            <span class="label-medium font-bold text-on-surface whitespace-nowrap overflow-hidden text-ellipsis">{{ cat }}</span>
-                            <span v-if="!collapsedCategories.includes(cat)" class="text-[10px] text-on-surface-variant/50 w-5 h-5 flex items-center justify-center bg-surface-high rounded-full">{{ savedElements.filter(e => e.category === cat).length }}</span>
-                        </div>
-                        
-                        <span v-if="collapsedCategories.includes(cat)" class="text-[10px] text-on-surface font-bold w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-full mt-2">{{ savedElements.filter(e => e.category === cat).length }}</span>
+            <div v-if="openSections.includes('saved')" class="p-3 pt-0 border-t border-outline/5 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <input type="file" hidden ref="jsonInputRef" accept=".json" @change="handleJsonImport" />
 
-                        <button v-if="!collapsedCategories.includes(cat) && cat !== 'General'" @click.stop="deleteCategory(cat)" class="p-1 text-on-surface-variant hover:text-error opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Trash2 :size="12" />
-                        </button>
-                    </div>
-
-                    <!-- Column Content (Drop Zone) -->
-                    <div v-show="!collapsedCategories.includes(cat)" class="flex-1 p-2 flex flex-col gap-2 overflow-y-auto max-h-[400px]">
-                        <div 
-                            v-for="asset in savedElements.filter(e => e.category === cat)" 
-                            :key="asset.id" 
-                            class="group relative bg-surface-high rounded-xl p-3 cursor-grab hover:shadow-md transition-all border border-outline/10 hover:border-primary active:cursor-grabbing"
-                            draggable="true"
-                            @dragstart="onDragStart($event, asset)"
-                            @click="handleAddElement({ ...asset.data, id: undefined })"
-                        >
-                            <!-- Mini Preview -->
-                            <div class="flex items-center gap-2 mb-2 pointer-events-none">
-                                <Type v-if="asset.type === 'text'" :size="16" class="text-on-surface-variant opacity-70" />
-                                <ImageIcon v-else-if="asset.type === 'image'" :size="16" class="text-on-surface-variant opacity-70" />
-                                <Code2 v-else-if="asset.type === 'custom'" :size="16" class="text-on-surface-variant opacity-70" />
-                                <Box v-else :size="16" class="text-on-surface-variant opacity-70" />
-                                <span class="text-[10px] text-on-surface-variant opacity-50 uppercase tracking-wider">{{ asset.type }}</span>
-                            </div>
-
-                            <!-- Name or Rename Input -->
-                            <div v-if="editingAssetId === asset.id" @click.stop class="w-full">
-                                <input v-model="editingAssetName" @keyup.enter="handleRenameAsset(asset.id)" @blur="handleRenameAsset(asset.id)" class="w-full text-center bg-surface border border-primary rounded px-1 text-xs" autoFocus />
-                            </div>
-                            <div v-else class="label-small font-bold truncate text-on-surface mb-0.5">{{ asset.name }}</div>
-                            
-                            <!-- Menu Button -->
-                            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button @click.stop="activeAssetMenu = activeAssetMenu === asset.id ? null : asset.id" class="p-1 rounded-full hover:bg-black/10">
-                                    <MoreVertical :size="14" />
-                                </button>
-                            </div>
-                            
-                            <!-- Dropdown Menu -->
-                            <div v-if="activeAssetMenu === asset.id" class="absolute top-6 right-2 w-28 bg-surface-container-high shadow-lg rounded-lg z-20 flex flex-col overflow-hidden border border-outline/10" @click.stop>
-                                <button @click="startEditing(asset)" class="text-left px-3 py-2 text-xs hover:bg-primary/10 hover:text-primary">Rename</button>
-                                <button @click="deleteElementAsset(asset.id)" class="text-left px-3 py-2 text-xs hover:bg-error/10 hover:text-error">Delete</button>
-                            </div>
-                        </div>
-                        
-                         <!-- Empty State -->
-                        <div v-if="savedElements.filter(e => e.category === cat).length === 0" class="py-6 text-center text-xs text-on-surface-variant/30 border-2 border-dashed border-outline/10 rounded-xl">
-                            Drop Here
-                        </div>
-                    </div>
+                <!-- New Category Input -->
+                <div v-if="isCreatingCategory" class="flex gap-2 mb-2">
+                    <input v-model="newCategoryName" @keyup.enter="handleCreateCategory" placeholder="Column Name" class="flex-1 bg-surface-high border border-outline/10 rounded-lg px-3 py-2 text-xs focus:border-primary outline-none" autoFocus />
+                    <button @click="handleCreateCategory" class="px-3 bg-primary text-on-primary rounded-lg text-xs font-bold">Add</button>
                 </div>
-             </div>
+
+                <div v-if="savedElements.length === 0" class="p-4 text-center text-on-surface-variant/50 text-xs italic">
+                    No saved assets. Select an element on canvas to save it.
+                </div>
+                
+                <!-- Kanban Columns Container -->
+                 <div class="flex flex-nowrap overflow-x-auto gap-3 pb-2 min-h-[250px] items-start snap-x">
+                    <div 
+                        v-for="cat in categories" 
+                        :key="cat" 
+                        class="kanban-column shrink-0 snap-start transition-all duration-300 border border-outline/10 rounded-xl bg-surface-high/20 flex flex-col overflow-hidden"
+                        :class="collapsedCategories.includes(cat) ? 'w-10' : 'w-48'"
+                        @dragover.prevent
+                        @drop="onDrop($event, cat)"
+                    >
+                        <!-- Header -->
+                        <div 
+                            @click="toggleCategory(cat)" 
+                            class="p-2 cursor-pointer hover:bg-surface-high/50 transition-colors border-b border-outline/5 flex items-center"
+                            :class="collapsedCategories.includes(cat) ? 'flex-col gap-2 justify-start h-full py-4' : 'justify-between'"
+                        >
+                            <div class="flex items-center gap-2" :class="{ 'flex-col vertical-text': collapsedCategories.includes(cat) }">
+                                <component :is="collapsedCategories.includes(cat) ? ChevronRight : ChevronDown" :size="16" class="text-on-surface-variant shrink-0" />
+                                <span class="label-medium font-bold text-on-surface whitespace-nowrap overflow-hidden text-ellipsis">{{ cat }}</span>
+                                <span v-if="!collapsedCategories.includes(cat)" class="text-[10px] text-on-surface-variant/50 w-5 h-5 flex items-center justify-center bg-surface-high rounded-full">{{ savedElements.filter(e => e.category === cat).length }}</span>
+                            </div>
+                            
+                            <span v-if="collapsedCategories.includes(cat)" class="text-[10px] text-on-surface font-bold w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-full mt-2">{{ savedElements.filter(e => e.category === cat).length }}</span>
+
+                            <button v-if="!collapsedCategories.includes(cat) && cat !== 'General'" @click.stop="deleteCategory(cat)" class="p-1 text-on-surface-variant hover:text-error opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Trash2 :size="12" />
+                            </button>
+                        </div>
+
+                        <!-- Column Content (Drop Zone) -->
+                        <div v-show="!collapsedCategories.includes(cat)" class="flex-1 p-2 flex flex-col gap-2 overflow-y-auto max-h-[300px] custom-scrollbar">
+                            <div 
+                                v-for="asset in savedElements.filter(e => e.category === cat)" 
+                                :key="asset.id" 
+                                class="group relative bg-surface-high rounded-xl p-3 cursor-grab hover:shadow-md transition-all border border-outline/10 hover:border-primary active:cursor-grabbing"
+                                draggable="true"
+                                @dragstart="onDragStart($event, asset)"
+                                @click="handleAddElement({ ...asset.data, id: undefined })"
+                            >
+                                <!-- Mini Preview -->
+                                <div class="flex items-center gap-2 mb-2 pointer-events-none">
+                                    <Type v-if="asset.type === 'text'" :size="16" class="text-on-surface-variant opacity-70" />
+                                    <ImageIcon v-else-if="asset.type === 'image'" :size="16" class="text-on-surface-variant opacity-70" />
+                                    <Code2 v-else-if="asset.type === 'custom'" :size="16" class="text-on-surface-variant opacity-70" />
+                                    <Box v-else :size="16" class="text-on-surface-variant opacity-70" />
+                                    <span class="text-[10px] text-on-surface-variant opacity-50 uppercase tracking-wider">{{ asset.type }}</span>
+                                </div>
+
+                                <!-- Name or Rename Input -->
+                                <div v-if="editingAssetId === asset.id" @click.stop class="w-full">
+                                    <input v-model="editingAssetName" @keyup.enter="handleRenameAsset(asset.id)" @blur="handleRenameAsset(asset.id)" class="w-full text-center bg-surface border border-primary rounded px-1 text-xs" autoFocus />
+                                </div>
+                                <div v-else class="label-small font-bold truncate text-on-surface mb-0.5">{{ asset.name }}</div>
+                                
+                                <!-- Menu Button -->
+                                <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button @click.stop="activeAssetMenu = activeAssetMenu === asset.id ? null : asset.id" class="p-1 rounded-full hover:bg-black/10">
+                                        <MoreVertical :size="14" />
+                                    </button>
+                                </div>
+                                
+                                <!-- Dropdown Menu -->
+                                <div v-if="activeAssetMenu === asset.id" class="absolute top-6 right-2 w-28 bg-surface-container-high shadow-lg rounded-lg z-20 flex flex-col overflow-hidden border border-outline/10" @click.stop>
+                                    <button @click="startEditing(asset)" class="text-left px-3 py-2 text-xs hover:bg-primary/10 hover:text-primary">Rename</button>
+                                    <button @click="deleteElementAsset(asset.id)" class="text-left px-3 py-2 text-xs hover:bg-error/10 hover:text-error">Delete</button>
+                                </div>
+                            </div>
+                            
+                             <!-- Empty State -->
+                            <div v-if="savedElements.filter(e => e.category === cat).length === 0" class="py-6 text-center text-xs text-on-surface-variant/30 border-2 border-dashed border-outline/10 rounded-xl">
+                                Drop Here
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+            </div>
         </div>
 
-        <!-- Gallery (Images) -->
-        <div v-if="uploads.length > 0" class="space-y-3">
-            <div class="flex items-center justify-between px-2">
-                <h3 class="label-large text-on-surface-variant uppercase tracking-widest">Image Library</h3>
-                <span class="text-xs text-on-surface-variant/50">{{ uploads.length }} items</span>
-            </div>
+        <!-- Image Library Accordion -->
+        <div class="border border-outline/10 rounded-2xl overflow-hidden bg-surface-high/10">
+            <button 
+                @click="toggleSection('uploads')" 
+                class="w-full flex items-center justify-between p-3 hover:bg-surface-high/30 transition-colors"
+            >
+                <div class="flex items-center gap-2">
+                    <component :is="openSections.includes('uploads') ? ChevronDown : ChevronRight" :size="18" class="text-on-surface-variant" />
+                    <span class="label-medium font-bold text-on-surface">Image Library</span>
+                </div>
+                 <span class="text-[10px] text-on-surface-variant/50 bg-surface-high px-2 py-0.5 rounded-full">{{ uploads.length }}</span>
+            </button>
             
-            <div class="grid grid-cols-2 gap-3">
-                <div v-for="media in uploads" :key="media.id" class="group relative aspect-square bg-surface-high rounded-2xl overflow-hidden cursor-pointer border border-outline/10 hover:border-primary transition-all">
-                    <img 
-                        :src="media.url" 
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                        @click="handleAddElement({ type: 'image', src: media.url, x: 100, y: 100, style: { width: 300, height: 300 } })"
-                    />
-                    
-                    <!-- Delete Overlay -->
-                    <button 
-                        @click.stop="deleteUpload(media.id)" 
-                        class="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-error rounded-lg flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
-                        title="Delete Asset"
-                    >
-                        <Trash2 :size="14" />
-                    </button>
-                    
-                    <!-- Add Overlay (Mobile friendly visual cue) -->
-                    <div class="absolute inset-0 bg-primary/10 opacity-0 active:opacity-100 pointer-events-none transition-opacity"></div>
+            <div v-if="openSections.includes('uploads')" class="p-3 pt-0 border-t border-outline/5 animate-in slide-in-from-top-2 duration-200">
+                <div v-if="uploads.length > 0" class="grid grid-cols-2 gap-3 mt-3">
+                    <div v-for="media in uploads" :key="media.id" class="group relative aspect-square bg-surface-high rounded-2xl overflow-hidden cursor-pointer border border-outline/10 hover:border-primary transition-all">
+                        <img 
+                            :src="media.url" 
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                            @click="handleAddElement({ type: 'image', src: media.url, x: 100, y: 100, style: { width: 300, height: 300 } })"
+                        />
+                        
+                        <!-- Delete Overlay -->
+                        <button 
+                            @click.stop="deleteUpload(media.id)" 
+                            class="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-error rounded-lg flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                            title="Delete Asset"
+                        >
+                            <Trash2 :size="14" />
+                        </button>
+                        
+                        <!-- Add Overlay (Mobile friendly visual cue) -->
+                        <div class="absolute inset-0 bg-primary/10 opacity-0 active:opacity-100 pointer-events-none transition-opacity"></div>
+                    </div>
+                </div>
+                <div v-else class="py-8 text-center text-on-surface-variant/40 text-xs italic">
+                    No images uploaded yet.
                 </div>
             </div>
         </div>

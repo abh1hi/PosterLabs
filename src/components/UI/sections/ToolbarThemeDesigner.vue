@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { reactive, nextTick } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { useThemes, type Theme } from '../../../composables/useThemes'
 import { useCanvas } from '../../../composables/useCanvas'
-import { Check, Eye, ChevronLeft } from 'lucide-vue-next'
+import { Check, Eye, ChevronLeft, Plus, X } from 'lucide-vue-next'
 import '@material/web/iconbutton/icon-button.js'
 import '@material/web/button/filled-button.js'
 import '@material/web/button/text-button.js'
@@ -14,6 +14,7 @@ const { activeTab } = useCanvas()
 // Helper state to match new structure
 const newTheme = reactive<Omit<Theme, 'id' | 'isCustom'>>({
     name: 'My New Theme',
+    logos: [],
     colors: {
         background: '#ffffff',
         primary: '#3b82f6',
@@ -26,6 +27,12 @@ const newTheme = reactive<Omit<Theme, 'id' | 'isCustom'>>({
             fontFamily: 'Inter',
             fontWeight: '700',
             letterSpacing: '-1px',
+            textTransform: 'none'
+        },
+        subheading: {
+            fontFamily: 'Inter',
+            fontWeight: '600',
+            letterSpacing: '-0.5px',
             textTransform: 'none'
         },
         body: {
@@ -61,6 +68,31 @@ const saveTheme = () => {
 
 const cancel = () => {
     activeTab.value = 'themes'
+}
+
+// Logo Logic
+const logoInput = ref<HTMLInputElement | null>(null)
+
+const handleLogoUpload = async (e: Event) => {
+    const target = e.target as HTMLInputElement
+    if (target.files?.[0]) {
+        const file = target.files[0]
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            if (e.target?.result && typeof e.target.result === 'string') {
+                if (!newTheme.logos) newTheme.logos = []
+                newTheme.logos.push(e.target.result)
+            }
+        }
+        reader.readAsDataURL(file)
+        target.value = '' // Reset
+    }
+}
+
+const removeLogo = (index: number) => {
+    if (newTheme.logos) {
+        newTheme.logos.splice(index, 1)
+    }
 }
 
 nextTick(() => {
@@ -114,6 +146,29 @@ const transforms = ['none', 'uppercase', 'lowercase', 'capitalize']
                 </div>
             </div>
 
+            <!-- Brand Logos -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Brand Logos</div>
+                     <md-icon-button @click="logoInput?.click()" title="Upload Logo">
+                        <Plus :size="18" />
+                    </md-icon-button>
+                    <input type="file" ref="logoInput" hidden accept="image/*" @change="handleLogoUpload" />
+                </div>
+                
+                <div v-if="newTheme.logos && newTheme.logos.length > 0" class="grid grid-cols-3 gap-2">
+                    <div v-for="(logo, index) in newTheme.logos" :key="index" class="group relative aspect-square bg-white rounded-lg border border-outline/10 flex items-center justify-center p-2">
+                        <img :src="logo" class="max-w-full max-h-full object-contain" />
+                        <button class="absolute -top-1 -right-1 bg-error text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" @click="removeLogo(index)">
+                            <X :size="10" />
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="text-xs text-on-surface-variant/50 italic text-center py-4 border border-dashed border-outline/20 rounded-lg">
+                    No logos added
+                </div>
+            </div>
+
             <!-- Typography -->
              <div class="space-y-3">
                 <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Typography</div>
@@ -134,6 +189,25 @@ const transforms = ['none', 'uppercase', 'lowercase', 'capitalize']
                              <option v-for="t in transforms" :key="t" :value="t">{{ t }}</option>
                         </select>
                          <input type="text" v-model="newTheme.typography.heading.letterSpacing" placeholder="Spacing (e.g. 1px)" class="w-full text-sm p-2 rounded bg-surface border border-outline/20" />
+                    </div>
+                </div>
+
+                <!-- Subheadings -->
+                <div class="bg-surface-high p-3 rounded-xl border border-outline/10 space-y-3">
+                    <label class="text-xs font-bold text-primary block">Subheadings</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select v-model="newTheme.typography.subheading.fontFamily" class="w-full text-sm p-2 rounded bg-surface border border-outline/20">
+                            <option v-for="f in fonts" :key="f" :value="f">{{ f }}</option>
+                        </select>
+                        <select v-model="newTheme.typography.subheading.fontWeight" class="w-full text-sm p-2 rounded bg-surface border border-outline/20">
+                            <option v-for="w in weights" :key="w" :value="w">W-{{ w }}</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select v-model="newTheme.typography.subheading.textTransform" class="w-full text-sm p-2 rounded bg-surface border border-outline/20">
+                             <option v-for="t in transforms" :key="t" :value="t">{{ t }}</option>
+                        </select>
+                         <input type="text" v-model="newTheme.typography.subheading.letterSpacing" placeholder="Spacing (e.g. 1px)" class="w-full text-sm p-2 rounded bg-surface border border-outline/20" />
                     </div>
                 </div>
 
