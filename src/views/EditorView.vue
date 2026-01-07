@@ -130,6 +130,19 @@ window.addEventListener('beforeinstallprompt', (e) => {
   showInstallButton.value = true
 })
 
+const installApp = async () => {
+  if (!deferredPrompt.value) {
+      // Fallback or info
+      return
+  }
+  deferredPrompt.value.prompt()
+  const { outcome } = await deferredPrompt.value.userChoice
+  if (outcome === 'accepted') {
+    deferredPrompt.value = null
+    showInstallButton.value = false
+  }
+}
+
 const handleAppLogout = async () => {
     await logout()
 }
