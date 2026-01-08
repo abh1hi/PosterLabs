@@ -72,7 +72,8 @@
 }
 
 @utility fade-in {
-    opacity: 0;
+    /* opacity: 0; Removed to fix visibility issue where animation doesn't trigger */
+    opacity: 1; 
 }
 
 
