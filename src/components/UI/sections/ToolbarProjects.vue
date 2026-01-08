@@ -2,9 +2,9 @@
 import { ref } from 'vue'
 import { useProjects } from '../../../composables/useProjects'
 import { useToasts } from '../../../composables/useToasts'
-import { Plus, Save, FileJson, Folder, Box, Trash2, ClipboardPaste } from 'lucide-vue-next'
+import { Plus, Save, FileJson, Folder, Box, Trash2, ClipboardPaste, X, Check, Edit2 } from 'lucide-vue-next'
 
-const { projects, loadProject, deleteProject, deleteProjects, createNewProject, createProjectFromImport, createProjectFromJsonString, saveProject } = useProjects()
+const { projects, loadProject, deleteProject, deleteProjects, createNewProject, createProjectFromImport, createProjectFromJsonString, saveProject, renameProject } = useProjects()
 const { showToast } = useToasts()
 const projectInputRef = ref<HTMLInputElement | null>(null)
 
@@ -46,22 +46,57 @@ const handleProjectImport = (e: Event) => {
     reader.readAsText(file)
 }
 
-const handlePasteJson = async () => {
+const isJsonModalOpen = ref(false)
+const jsonContent = ref('')
+
+const openJsonModal = () => {
+    isJsonModalOpen.value = true
+    jsonContent.value = ''
+    // Try to auto-paste if permission allows? No, user asked for a button.
+}
+
+const pasteFromClipboardToInput = async () => {
     try {
         const text = await navigator.clipboard.readText()
-        if (!text) {
+        if (text) {
+            jsonContent.value = text
+            showToast('Pasted from clipboard', 'success')
+        } else {
             showToast('Clipboard is empty', 'error')
-            return
         }
-        createProjectFromJsonString(text)
     } catch (e) {
         showToast('Failed to read clipboard', 'error')
     }
 }
 
+const handleImportFromJsonInput = () => {
+    if (!jsonContent.value.trim()) {
+        showToast('Please enter JSON content', 'error')
+        return
+    }
+    
+    // Attempt to parse first to validate
+    try {
+        JSON.parse(jsonContent.value)
+    } catch (e) {
+        showToast('Invalid JSON format', 'error')
+        return
+    }
+
+    createProjectFromJsonString(jsonContent.value)
+    isJsonModalOpen.value = false
+}
+
 const handleSaveProject = () => {
     const name = window.prompt('Enter project name:', 'My Awesome Poster');
     if (name) saveProject(name);
+}
+
+const handleRenameProject = (project: any) => {
+    const newName = window.prompt('Rename project:', project.name)
+    if (newName && newName !== project.name) {
+        renameProject(project.id, newName)
+    }
 }
 </script>
 
@@ -81,7 +116,7 @@ const handleSaveProject = () => {
                 <FileJson :size="24" class="text-secondary" />
                 <span class="label-medium font-bold">Import</span>
             </button>
-            <button @click="handlePasteJson" class="p-3 bg-secondary-container rounded-xl flex flex-col items-center justify-center gap-2 hover:brightness-105 transition-all text-on-secondary-container">
+            <button @click="openJsonModal" class="p-3 bg-secondary-container rounded-xl flex flex-col items-center justify-center gap-2 hover:brightness-105 transition-all text-on-secondary-container">
                 <ClipboardPaste :size="24" />
                 <span class="label-medium font-bold">Paste JSON</span>
             </button>
@@ -146,9 +181,62 @@ const handleSaveProject = () => {
                         <button @click.stop="loadProject(project.id)" class="w-8 h-8 rounded-full hover:bg-primary/10 text-primary flex items-center justify-center" title="Load">
                         <Box :size="16" />
                         </button>
+                        <button @click.stop="handleRenameProject(project)" class="w-8 h-8 rounded-full hover:bg-secondary/10 text-secondary flex items-center justify-center" title="Rename">
+                            <Edit2 :size="16" />
+                        </button>
                         <button @click.stop="deleteProject(project.id)" class="w-8 h-8 rounded-full hover:bg-error/10 text-error flex items-center justify-center" title="Delete">
                         <Trash2 :size="16" />
                         </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- JSON Import Modal -->
+        <div v-if="isJsonModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div class="bg-surface w-full max-w-lg rounded-2xl shadow-xl border border-outline/10 flex flex-col max-h-[80vh]">
+                <div class="flex items-center justify-between p-4 border-b border-outline/10">
+                    <h3 class="title-medium text-on-surface">Import Project JSON</h3>
+                    <button @click="isJsonModalOpen = false" class="p-2 hover:bg-surface-variant rounded-full text-on-surface-variant">
+                        <X :size="20" />
+                    </button>
+                </div>
+                
+                <div class="p-4 flex-1 overflow-hidden flex flex-col gap-4">
+                    <div class="bg-primary-container/20 p-3 rounded-lg flex items-start gap-3">
+                         <div class="p-2 bg-primary-container rounded-full text-on-primary-container shrink-0">
+                            <ClipboardPaste :size="16" />
+                         </div>
+                         <div class="text-sm text-on-surface-variant">
+                            <p class="font-bold text-on-surface mb-1">Paste your JSON code</p>
+                            <p>Copy the project JSON code and paste it below to import a project.</p>
+                         </div>
+                    </div>
+
+                    <div class="relative flex-1 min-h-[200px]">
+                        <textarea 
+                            v-model="jsonContent"
+                            class="w-full h-full p-4 rounded-xl bg-surface-variant border-none focus:ring-2 focus:ring-primary font-mono text-sm resize-none text-on-surface-variant"
+                            placeholder='{"settings": {...}, "elements": [...]}'
+                        ></textarea>
+                        <button 
+                            @click="pasteFromClipboardToInput"
+                            class="absolute top-2 right-2 bg-surface shadow-sm border border-outline/10 px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-surface-high flex items-center gap-2"
+                        >
+                            <ClipboardPaste :size="14" />
+                            Paste from Clipboard
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-outline/10 flex justify-end gap-3">
+                    <button @click="isJsonModalOpen = false" class="px-4 py-2 rounded-full text-sm font-bold text-on-surface-variant hover:bg-surface-variant">
+                        Cancel
+                    </button>
+                    <button @click="handleImportFromJsonInput" class="px-6 py-2 rounded-full bg-primary text-on-primary text-sm font-bold flex items-center gap-2 hover:brightness-110">
+                        <Check :size="18" />
+                        Import Project
+                    </button>
                 </div>
             </div>
         </div>

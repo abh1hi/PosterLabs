@@ -1,6 +1,6 @@
 # PosterLabs Project JSON Schema Guide
 
-This manual is designed for developers who want to programmatically generate or manually craft `json` project files for **PosterLabs**. By understanding this schema, you can create pixel-perfect templates, posters, and banners.
+This manual is designed for developers and AI Agents (LLMs) to programmatically generate or manually craft `json` project files for **PosterLabs**. By understanding this schema, you can create pixel-perfect templates, posters, and banners.
 
 ## 1. File Structure Overview
 A valid PosterLabs project file (typically `.json` or `.posterLabs`) consists of a root object with two critical sections: `settings` and `elements`. Optional metadata like `thumbnail` can also be included.
@@ -218,4 +218,49 @@ Here is a minimal valid JSON file for a 1080x1080 white canvas with one text ele
 2.  **Layers**: The `elements` array is strictly ordered. The first item is the bottom-most layer. To bring "Text" over an "Image", place the Text object *after* the Image object in the array.
 3.  **Fonts**: Ensure the `fontFamily` you specify is actually loaded in the `index.html` or your font loader. Common Google Fonts like *Inter*, *Roboto*, *Poppins*, *Playfair Display* are good bets.
 4.  **Base64 vs URLs**: URLs are lighter (`"src": "https://..."`), but Base64 (`"src": "data:image..."`) makes the project file self-contained and offline-ready. For robust templates, Base64 is often safer if you don't control the image hosting.
-5.  **Grouping**: Currently, there is no explicit "Group" container. Grouping is conceptual. To move multiple items, they must be selected together in the UI. 
+5.  **Grouping**: Currently, there is no explicit "Group" container. Grouping is conceptual. To move multiple items, they must be selected together in the UI.
+
+---
+
+## 7. AI/LLM Generation Guidelines
+**Context for AI Agents**: Use this section to generate "State of the Art", modern, and complex posters.
+
+### A. Design Philosophy (Aesthetics First)
+To satisfy the "Modern & Aesthetic" requirement:
+- **Visual Hierarchy**: Use extreme contrast in size. A headline might be `120px` while body text is `16px`.
+- **Color Harmony**: 
+    - Avoid default colors. Use sophisticated palettes (e.g., Deep Emerald + Gold, Charcoal + Neon, Pastel Gradients).
+    - Use `gradientStyle` for backgrounds to add dynamism.
+- **Composition**: Don't center everything. Use asymmetry, bleed effects (images going off-canvas), and layering.
+- **Depth**: ALWAYS use `shadow` for floating elements. Use `mixBlendMode: "overlay"` or `"soft-light"` for text over images to make it look embedded.
+
+### B. Custom Generated Assets
+The system supports integrating AI-generated or custom assets dynamically.
+1.  **Generate**: If the user prompt implies a unique visual (e.g., "a retro futuristic car"), generating the image (DALL-E/Midjourney) and converting it to **Base64** is the preferred method for the `src` field.
+2.  **Placeholder**: If generation isn't possible, use high-quality Unsplash URLs ensuring they match the mood.
+
+### C. Using Custom HTML Templates
+The `custom` element type is a powerful fallback for things standard elements can't do.
+- **Use Case**: Complex SVGs, CSS patterns, erratic borders, noise overlays, or specific typograhic layouts (like curved text).
+- **Implementation**: Inject valid HTML/SVG into the `customHtml` string.
+- **Styling**: Include inline styles or SVG attributes. The `style` object of the element still controls the bounding box (`width`, `height`, `x`, `y`).
+
+**Example: Noise Overlay via Custom HTML**
+```json
+{
+  "type": "custom",
+  "customHtml": "<div style='width:100%; height:100%; background: url(data:image/svg+xml;base64,...)'></div>",
+  "style": { "width": 1080, "height": 1080, "mixBlendMode": "overlay", "opacity": 0.2 }
+}
+```
+
+### D. Feature Checklist for "Complex" Posters
+When asked for a "Complex" poster, ensure you utilize:
+- [ ] At least one **Gradient Background** or **Image Background** with `objectFit: cover`.
+- [ ] Multiple **Text Layers** with varying fonts and weights (Display vs Sans).
+- [ ] **Shapes** used as decorative elements (e.g., circles behind text, lines for division, distinct borders).
+- [ ] **Filters** applied to images (e.g., `grayscale: 100` with `contrast: 120` for a noir look).
+- [ ] **Blend Modes** to merge layers creatively.
+
+### E. Automatic Output
+When the user asks to "generate a poster", simply output the valid JSON block. The system is designed to parse this JSON and "automatically export" or render it immediately. No extra "export command" is needed inside the JSON; the JSON *is* the export.

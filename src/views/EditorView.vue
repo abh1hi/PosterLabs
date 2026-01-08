@@ -13,14 +13,10 @@ import {
   LayoutDashboard, Box, Type, Share2, Palette, Image, Zap, FileText, Save,
   Menu, Settings, LogOut, LayoutTemplate,
   Undo2, Redo2, Layers, Download, Cloud, CloudOff, Folder, Code2, User, ArrowLeft,
-  PenTool, Move
+  PenTool, Move, Search, Command
 } from 'lucide-vue-next'
 
-import '@material/web/iconbutton/icon-button.js'
-import '@material/web/button/filled-button.js'
-import '@material/web/button/text-button.js'
-import '@material/web/menu/menu.js'
-import '@material/web/menu/menu-item.js'
+
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
 const router = useRouter()
@@ -171,6 +167,76 @@ const toggleProperties = () => {
     triggerHaptic()
 }
 
+// --- Search / Command Palette Logic ---
+const isSearchOpen = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+const searchableItems = [
+    // Tabs
+    { type: 'tab', id: 'design', label: 'Design', icon: LayoutDashboard, keywords: 'layout canvas size' },
+    { type: 'tab', id: 'text', label: 'Text', icon: Type, keywords: 'font typography add text' },
+    { type: 'tab', id: 'layers', label: 'Layers', icon: Layers, keywords: 'arrange z-index stack' },
+    { type: 'tab', id: 'elements', label: 'Elements', icon: Box, keywords: 'shapes rectangle circle' },
+    { type: 'tab', id: 'assets', label: 'Assets', icon: Image, keywords: 'photos upload images' },
+    { type: 'tab', id: 'draw', label: 'Draw', icon: PenTool, keywords: 'paint sketch pencil' },
+    { type: 'tab', id: 'themes', label: 'Themes', icon: Palette, keywords: 'colors styles preset' },
+    { type: 'tab', id: 'templates', label: 'Templates', icon: LayoutTemplate, keywords: 'pre-made starter' },
+    { type: 'tab', id: 'resize', label: 'Resize', icon: Move, keywords: 'dimension scale' },
+    { type: 'tab', id: 'code', label: 'Code', icon: Code2, keywords: 'json developer export' },
+    { type: 'tab', id: 'properties', label: 'Properties', icon: Settings, keywords: 'settings config' },
+    // Actions
+    { type: 'action', id: 'export', label: 'Export Design', icon: Download, keywords: 'save download png jpeg pdf', action: () => isExportMenuOpen.value = true },
+    { type: 'action', id: 'undo', label: 'Undo', icon: Undo2, keywords: 'back revert', action: undo },
+    { type: 'action', id: 'redo', label: 'Redo', icon: Redo2, keywords: 'forward reapply', action: redo },
+    { type: 'action', id: 'home', label: 'Back to Home', icon: ArrowLeft, keywords: 'dashboard main', action: handleBackToHome },
+]
+
+import { computed, nextTick } from 'vue'
+
+const filteredSearchResults = computed(() => {
+    const query = searchQuery.value.toLowerCase().trim()
+    if (!query) return searchableItems.slice(0, 5) // Show top 5 by default
+    return searchableItems.filter(item => 
+        item.label.toLowerCase().includes(query) || 
+        item.keywords.includes(query)
+    )
+})
+
+const openSearch = () => {
+    isSearchOpen.value = true
+    nextTick(() => {
+        searchInputRef.value?.focus()
+    })
+}
+
+const handleSearchResultClick = (item: any) => {
+    if (item.type === 'tab') {
+        handleTabChange(item.id)
+    } else if (item.item?.action) { // Direct action mapping if structure was different, but here:
+        // Handled below in template or direct call
+    }
+    
+    if (item.action) {
+        item.action()
+    }
+
+    isSearchOpen.value = false
+    searchQuery.value = ''
+    triggerHaptic()
+}
+
+// Keyboard Shortcut for Search (Ctrl+K)
+window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        openSearch()
+    }
+    if (e.key === 'Escape' && isSearchOpen.value) {
+        isSearchOpen.value = false
+    }
+})
+
 onMounted(() => {
     // Sync logic removed
 })
@@ -256,21 +322,21 @@ onMounted(() => {
         <!-- Premium Top App Bar (Google UI + Canvas Inspired) -->
         <header class="h-16 flex items-center justify-between px-4 sm:px-6 bg-surface/60 backdrop-blur-xl border-b border-outline/10 z-30 shrink-0 sticky top-0 transition-all duration-500 shadow-sm shadow-black/5">
            <!-- Left: Brand & Poster Info -->
-           <div class="flex items-center gap-3 sm:gap-4 min-w-0">
-              <md-icon-button class="md:hidden hover:bg-surface-variant/20 transition-colors" @click="toggleProperties">
+           <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 sm:flex-initial">
+              <button class="md:hidden p-2 rounded-full hover:bg-surface-variant/20 transition-colors text-on-surface-variant flex-shrink-0" @click="toggleProperties">
                  <Menu :size="20" />
-              </md-icon-button>
+              </button>
               
-              <div class="flex items-center gap-4 sm:gap-5 min-w-0">
+              <div class="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
                  <!-- Logo Container / Home Button -->
-                 <div @click="handleBackToHome" class="group relative w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-surface-container rounded-2xl flex items-center justify-center shrink-0 border border-outline/10 cursor-pointer shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 transform active:scale-95" title="Back to Home">
+                 <div @click="handleBackToHome" class="hidden sm:flex group relative w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-surface-container rounded-2xl items-center justify-center shrink-0 border border-outline/10 cursor-pointer shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 transform active:scale-95" title="Back to Home">
                     <div class="absolute inset-0 bg-primary/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <ArrowLeft class="text-primary hidden group-hover:block relative z-10" :size="20" />
                     <img src="/pwa-192x192.png" alt="PosterLab" class="w-8 h-8 sm:w-9 sm:h-9 object-contain opacity-95 group-hover:hidden relative z-10">
                  </div>
 
                  <!-- Poster Title & Status -->
-                 <div class="flex flex-col min-w-0">
+                 <div class="flex flex-col min-w-0 flex-1">
                     <div class="flex items-center gap-2 group cursor-pointer max-w-full">
                        <h1 class="title-medium sm:headline-small font-bold text-on-surface truncate min-w-0 tracking-tight" title="My Creative Poster">
                           My Creative Poster
@@ -282,7 +348,7 @@ onMounted(() => {
                        </div>
                     </div>
 
-                    <!-- Status indicators (Modern Doc Style) -->
+                    <!-- Status indicators (Modern Doc Style) - Minimal Mobile -->
                     <div class="flex items-center gap-2 px-0.5">
                        <div v-if="!networkStatus.connected" class="flex items-center gap-1.5 text-error/90 label-small font-medium bg-error/5 px-2 py-0.5 rounded-full border border-error/10">
                            <CloudOff :size="12" />
@@ -292,125 +358,238 @@ onMounted(() => {
                            <Cloud :size="12" />
                            <span class="hidden sm:inline">Successively Saved</span>
                        </div>
-                       <div class="w-1 h-1 rounded-full bg-outline/20"></div>
-                       <span class="label-small text-on-surface-variant/60 font-medium tracking-wide uppercase text-[10px]">Version 1.2</span>
+                       <div class="hidden sm:block w-1 h-1 rounded-full bg-outline/20"></div>
+                       <span class="hidden sm:inline label-small text-on-surface-variant/60 font-medium tracking-wide uppercase text-[10px]">Version 1.2</span>
                     </div>
                  </div>
               </div>
            </div>
 
-           <!-- Center: Quick Tools (Enhanced Responsive) -->
-           <div class="flex items-center bg-surface-container-high/40 rounded-2xl px-1 sm:px-2 py-1 gap-0.5 sm:gap-1 border border-outline/10 backdrop-blur-md">
-              <md-icon-button @click="undo" :disabled="!canUndo" class="h-9 w-9 sm:h-10 sm:w-10 hover:bg-surface-variant/20 transition-colors">
+           <!-- Center: Quick Tools (Hidden on Mobile, replaced by Action Hub) -->
+           <div class="hidden sm:flex items-center bg-surface-container-high/40 rounded-2xl px-1 sm:px-2 py-1 gap-0.5 sm:gap-1 border border-outline/10 backdrop-blur-md">
+              <button @click="undo" :disabled="!canUndo" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl hover:bg-surface-variant/20 transition-colors disabled:opacity-30 disabled:hover:bg-transparent text-on-surface">
                  <Undo2 :size="18" />
-              </md-icon-button>
+              </button>
               <div class="w-px h-6 bg-outline/10 mx-0.5 sm:mx-1"></div>
-              <md-icon-button @click="redo" :disabled="!canRedo" class="h-9 w-9 sm:h-10 sm:w-10 hover:bg-surface-variant/20 transition-colors">
+              <button @click="redo" :disabled="!canRedo" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl hover:bg-surface-variant/20 transition-colors disabled:opacity-30 disabled:hover:bg-transparent text-on-surface">
                  <Redo2 :size="18" />
-              </md-icon-button>
+              </button>
            </div>
 
-           <!-- Right: Actions & History -->
-           <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+           <!-- Right: Actions & History & Search -->
+           <div class="flex items-center gap-1 sm:gap-4 shrink-0">
+              <!-- Search Button (Mobile & Desktop) -->
+                <button @click="openSearch" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant/20 text-on-surface-variant transition-colors">
+                    <Search :size="20" />
+                </button>
+
               <!-- Action Buttons -->
               <div class="flex items-center gap-2">
                 <input type="file" ref="projectInputRef" hidden accept=".posterLabs,.json" @change="handleImportFile" />
                 
-                <md-icon-button @click="projectInputRef?.click()" title="Open Project" class="hidden sm:flex bg-surface-container-high border border-outline/10 rounded-xl hover:bg-surface-container-highest transition-colors">
+                <button @click="projectInputRef?.click()" title="Open Project" class="hidden sm:flex w-10 h-10 items-center justify-center bg-surface-container-high border border-outline/10 rounded-xl hover:bg-surface-container-highest transition-colors text-on-surface-variant">
                     <Folder :size="20" />
-                </md-icon-button>
+                </button>
 
                 <div class="h-8 w-px bg-outline/10 mx-1 hidden sm:block"></div>
+                
+                <!-- Undo/Redo Mobile (Compact) -->
+                <button @click="undo" :disabled="!canUndo" class="sm:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant/20 transition-colors disabled:opacity-30 text-on-surface-variant">
+                    <Undo2 :size="18" />
+                </button>
+                <button @click="redo" :disabled="!canRedo" class="sm:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant/20 transition-colors disabled:opacity-30 text-on-surface-variant">
+                    <Redo2 :size="18" />
+                </button>
 
-                <md-filled-tonal-button class="h-10 sm:h-11 px-3 sm:px-5 rounded-xl transition-all hover:shadow-md active:scale-95 font-medium tracking-wide">
-                   <Share2 slot="icon" :size="20" />
+                <button class="hidden lg:flex h-10 sm:h-11 px-3 sm:px-5 items-center gap-2 rounded-xl bg-secondary-container text-on-secondary-container transition-all hover:shadow-md active:scale-95 font-medium tracking-wide border border-transparent hover:brightness-105">
+                   <Share2 :size="18" />
                    <span class="hidden sm:inline">Collaboration</span>
-                </md-filled-tonal-button>
+                </button>
 
                  <div class="relative group">
-                    <md-filled-button id="export-menu-anchor" @click="isExportMenuOpen = !isExportMenuOpen" class="h-10 sm:h-11 px-4 sm:px-6 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold tracking-wide transform active:scale-95">
-                       <Download slot="icon" :size="20" />
-                       <span class="hidden sm:inline">Export Design</span>
+                    <button 
+                        @click="isExportMenuOpen = !isExportMenuOpen" 
+                        class="h-9 sm:h-11 px-3 sm:px-6 flex items-center gap-2 rounded-xl bg-primary text-on-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold tracking-wide transform active:scale-95 hover:-translate-y-0.5"
+                    >
+                       <Download :size="18" />
+                       <span class="hidden sm:inline">Export</span>
+                    </button>
+                    
+                    <!-- Custom Dropdown Menu -->
+                    <div v-if="isExportMenuOpen" class="absolute right-0 top-full mt-2 w-64 bg-surface rounded-2xl shadow-xl border border-outline/10 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                       <div class="px-4 py-3 bg-surface-variant/10 border-b border-outline/5 flex items-center justify-between">
+                            <span class="label-small text-on-surface-variant font-bold uppercase tracking-widest opacity-70">Project Formats</span>
+                            <button @click="isExportMenuOpen = false" class="text-on-surface-variant hover:text-error"><Settings :size="14" /></button>
+                       </div>
                        
-                        <md-menu anchor="export-menu-anchor" :open="isExportMenuOpen" @closed="isExportMenuOpen = false" positioning="popover" class="mt-3 text-start min-w-[240px] rounded-24 overflow-hidden border border-outline/10 shadow-2xl">
-                           <div class="px-4 py-3 bg-surface-variant/10 border-b border-outline/5">
-                              <span class="label-small text-on-surface-variant font-bold uppercase tracking-widest opacity-70">Project Formats</span>
-                           </div>
-                           <md-menu-item @click="handleExport" class="hover:bg-primary/5 transition-colors">
-                              <div slot="start" class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                                 <Save :size="18" />
-                              </div>
-                              <div slot="headline" class="font-bold text-on-surface">Source File (.poster)</div>
-                              <div slot="supporting-text" class="text-[11px]">Best for future editing</div>
-                           </md-menu-item>
-                           <md-menu-item @click="handleJsonExport" class="hover:bg-secondary/5 transition-colors">
-                              <div slot="start" class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
-                                 <Code2 :size="18" />
-                              </div>
-                              <div slot="headline" class="font-bold text-on-surface">JSON Schema</div>
-                              <div slot="supporting-text" class="text-[11px]">Raw project data</div>
-                           </md-menu-item>
-                           
-                           <div class="h-px bg-outline/5 my-1 mx-2"></div>
-                           
-                           <div class="px-4 py-3 bg-surface-variant/10 border-y border-outline/5">
-                              <span class="label-small text-on-surface-variant font-bold uppercase tracking-widest opacity-70">Ready to Share</span>
-                           </div>
-                           <md-menu-item @click="handleImageExport('png')" class="hover:bg-surface-variant/10 transition-colors">
-                              <div slot="start" class="w-8 h-8 rounded-lg bg-surface-highest flex items-center justify-center text-on-surface-variant">
-                                 <Image :size="18" />
-                              </div>
-                              <div slot="headline" class="font-bold text-on-surface">High Quality PNG</div>
-                              <div slot="supporting-text" class="text-[11px]">Best for web & social</div>
-                           </md-menu-item>
-                           <md-menu-item @click="handleImageExport('jpeg')" class="hover:bg-surface-variant/10 transition-colors">
-                              <div slot="start" class="w-8 h-8 rounded-lg bg-surface-highest flex items-center justify-center text-on-surface-variant">
-                                 <Image :size="18" />
-                              </div>
-                              <div slot="headline" class="font-bold text-on-surface">Optimized JPEG</div>
-                              <div slot="supporting-text" class="text-[11px]">Smaller file size</div>
-                           </md-menu-item>
-                           <md-menu-item @click="handleImageExport('webp')" class="hover:bg-surface-variant/10 transition-colors">
-                              <div slot="start" class="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
-                                 <Zap :size="18" />
-                              </div>
-                              <div slot="headline" class="font-bold text-on-surface">Modern WebP</div>
-                              <div slot="supporting-text" class="text-[11px]">Fastest loading format</div>
-                           </md-menu-item>
-                           <div class="h-px bg-outline/5 my-1 mx-2"></div>
-                           <md-menu-item @click="handleImageExport('pdf')" class="hover:bg-error/5 transition-colors">
-                              <div slot="start" class="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center text-error">
-                                 <FileText :size="18" />
-                              </div>
-                              <div slot="headline" class="font-bold text-on-surface">PDF Document</div>
-                              <div slot="supporting-text" class="text-[11px]">Professional printing</div>
-                           </md-menu-item>
-                        </md-menu>
-                    </md-filled-button>
+                       <button @click="handleExport" class="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors flex items-center gap-3 group">
+                          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                             <Save :size="18" />
+                          </div>
+                          <div>
+                              <div class="font-bold text-on-surface label-large">Source File (.poster)</div>
+                              <div class="text-[11px] text-on-surface-variant">Best for future editing</div>
+                          </div>
+                       </button>
+
+                       <button @click="handleJsonExport" class="w-full text-left px-4 py-3 hover:bg-secondary/5 transition-colors flex items-center gap-3 group">
+                          <div class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+                             <Code2 :size="18" />
+                          </div>
+                          <div>
+                              <div class="font-bold text-on-surface label-large">JSON Schema</div>
+                              <div class="text-[11px] text-on-surface-variant">Raw project data</div>
+                          </div>
+                       </button>
+                       
+                       <div class="h-px bg-outline/10 my-1 mx-2"></div>
+                       
+                       <div class="px-4 py-2 bg-surface-variant/10 border-y border-outline/5">
+                          <span class="label-small text-on-surface-variant font-bold uppercase tracking-widest opacity-70">Ready to Share</span>
+                       </div>
+                       
+                       <button @click="handleImageExport('png')" class="w-full text-left px-4 py-3 hover:bg-surface-variant/10 transition-colors flex items-center gap-3 group">
+                          <div class="w-8 h-8 rounded-lg bg-surface-highest flex items-center justify-center text-on-surface-variant group-hover:scale-110 transition-transform">
+                             <Image :size="18" />
+                          </div>
+                          <div>
+                              <div class="font-bold text-on-surface label-large">High Quality PNG</div>
+                              <div class="text-[11px] text-on-surface-variant">Best for web & social</div>
+                          </div>
+                       </button>
+                       
+                       <button @click="handleImageExport('jpeg')" class="w-full text-left px-4 py-3 hover:bg-surface-variant/10 transition-colors flex items-center gap-3 group">
+                          <div class="w-8 h-8 rounded-lg bg-surface-highest flex items-center justify-center text-on-surface-variant group-hover:scale-110 transition-transform">
+                             <Image :size="18" />
+                          </div>
+                          <div>
+                              <div class="font-bold text-on-surface label-large">Optimized JPEG</div>
+                              <div class="text-[11px] text-on-surface-variant">Smaller file size</div>
+                          </div>
+                       </button>
+                       
+                       <button @click="handleImageExport('webp')" class="w-full text-left px-4 py-3 hover:bg-surface-variant/10 transition-colors flex items-center gap-3 group">
+                          <div class="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
+                             <Zap :size="18" />
+                          </div>
+                          <div>
+                              <div class="font-bold text-on-surface label-large">Modern WebP</div>
+                              <div class="text-[11px] text-on-surface-variant">Fastest loading format</div>
+                          </div>
+                       </button>
+                       
+                       <div class="h-px bg-outline/10 my-1 mx-2"></div>
+                       
+                       <button @click="handleImageExport('pdf')" class="w-full text-left px-4 py-3 hover:bg-error/5 transition-colors flex items-center gap-3 group">
+                          <div class="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center text-error group-hover:scale-110 transition-transform">
+                             <FileText :size="18" />
+                          </div>
+                          <div>
+                              <div class="font-bold text-on-surface label-large">PDF Document</div>
+                              <div class="text-[11px] text-on-surface-variant">Professional printing</div>
+                          </div>
+                       </button>
+                    </div>
+                    
+                    <!-- Backdrop for menu -->
+                    <div v-if="isExportMenuOpen" @click="isExportMenuOpen = false" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
                  </div>
               </div>
 
               <!-- Profile Avatar (Integrated) -->
-              <div class="pl-1 sm:pl-2 border-l border-outline/10 ml-1">
+              <div class="pl-1 sm:pl-2 border-l border-outline/10 ml-1 relative hidden sm:block">
                  <button id="header-user-menu-anchor" @click="isUserMenuOpen = !isUserMenuOpen" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full p-0.5 overflow-hidden ring-2 ring-outline/10 hover:ring-primary/40 transition-all duration-300 transform active:scale-95 shadow-sm">
                     <div class="w-full h-full rounded-full overflow-hidden bg-surface-container-highest flex items-center justify-center">
                         <img v-if="currentUser?.photoURL" :src="currentUser.photoURL" class="w-full h-full object-cover" />
                         <User v-else :size="22" class="text-on-surface-variant" />
                     </div>
                  </button>
-                 <md-menu anchor="header-user-menu-anchor" :open="isUserMenuOpen" @closed="isUserMenuOpen = false" positioning="popover" class="mt-3 rounded-2xl shadow-2xl border border-outline/10 min-w-[200px]">
-                    <md-menu-item @click="handleTabChange('profile')" class="py-2">
-                       <User slot="start" :size="18" />
-                       <div slot="headline" class="font-bold">Account Settings</div>
-                    </md-menu-item>
-                    <md-menu-item @click="handleAppLogout" class="py-2 text-error">
-                       <LogOut slot="start" :size="18" />
-                       <div slot="headline" class="font-bold">Logout Session</div>
-                    </md-menu-item>
-                 </md-menu>
+                 
+                 <!-- User Menu -->
+                 <div v-if="isUserMenuOpen" class="absolute right-0 top-full mt-2 w-56 bg-surface rounded-2xl shadow-xl border border-outline/10 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                    <div class="p-2">
+                        <button @click="handleTabChange('profile'); isUserMenuOpen = false" class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface-variant/20 transition-colors flex items-center gap-3">
+                           <User :size="18" class="text-on-surface-variant" />
+                           <span class="font-medium text-on-surface">Account Settings</span>
+                        </button>
+                        <button @click="handleAppLogout" class="w-full text-left px-3 py-2 rounded-xl hover:bg-error/10 transition-colors flex items-center gap-3 text-error">
+                           <LogOut :size="18" />
+                           <span class="font-medium">Logout Session</span>
+                        </button>
+                        <button v-if="showInstallButton" @click="installApp" class="w-full text-left px-3 py-2 rounded-xl hover:bg-primary/10 transition-colors flex items-center gap-3 text-primary mt-2 border-t border-outline/10 pt-2">
+                           <Download :size="18" />
+                           <span class="font-medium">Install App</span>
+                        </button>
+                    </div>
+                 </div>
+                 
+                 <div v-if="isUserMenuOpen" @click="isUserMenuOpen = false" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
               </div>
            </div>
         </header>
+
+        <!-- Search / Command Palette Modal -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0 scale-95"
+            enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
+        >
+            <div v-if="isSearchOpen" class="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-4">
+                <!-- Backdrop -->
+                <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="isSearchOpen = false"></div>
+
+                <!-- Command Palette -->
+                <div class="relative w-full max-w-lg bg-surface rounded-2xl shadow-2xl overflow-hidden border border-outline/10 flex flex-col max-h-[60vh]">
+                    <!-- Search Input -->
+                    <div class="flex items-center gap-3 px-4 py-3 border-b border-outline/5">
+                        <Search :size="20" class="text-on-surface-variant" />
+                        <input 
+                            ref="searchInputRef"
+                            v-model="searchQuery" 
+                            type="text" 
+                            placeholder="Type a command or search..." 
+                            class="flex-1 bg-transparent border-none outline-none text-on-surface placeholder:text-on-surface-variant/50 h-6 text-lg"
+                        />
+                        <button class="text-xs bg-surface-variant/20 text-on-surface-variant px-1.5 py-0.5 rounded border border-outline/10">ESC</button>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="overflow-y-auto p-2 flex flex-col gap-1">
+                        <template v-if="filteredSearchResults.length > 0">
+                            <button 
+                                v-for="item in filteredSearchResults" 
+                                :key="item.id"
+                                @click="handleSearchResultClick(item)"
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary/5 hover:text-primary transition-colors group text-left"
+                            >
+                                <div class="w-8 h-8 rounded-lg bg-surface-variant/10 text-on-surface-variant flex items-center justify-center group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                                    <component :is="item.icon" :size="18" />
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-medium text-on-surface group-hover:text-primary">{{ item.label }}</span>
+                                    <span class="text-[10px] text-on-surface-variant uppercase tracking-wider opacity-60">{{ item.type }}</span>
+                                </div>
+                                <div v-if="item.keywords.includes('Ctrl+')" class="ml-auto text-xs text-on-surface-variant/50">{{ item.keywords.match(/Ctrl\+\w/) }}</div>
+                            </button>
+                        </template>
+                        <div v-else class="py-8 text-center text-on-surface-variant/50">
+                            <div class="flex justify-center mb-2"><Command :size="32" class="opacity-20" /></div>
+                            <p class="text-sm">No results found for "{{ searchQuery }}"</p>
+                            <p class="text-xs mt-1">Try 'design', 'export', or 'layers'</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="px-4 py-2 bg-surface-container-low border-t border-outline/5 text-[10px] text-on-surface-variant/50 flex justify-between">
+                         <span>Navigate with <strong class="font-medium">Up/Down</strong></span>
+                         <span>Select with <strong class="font-medium">Enter</strong></span>
+                    </div>
+                </div>
+            </div>
+        </Transition>
 
         <!-- Editor Body -->
         <div class="flex-1 flex overflow-hidden relative">

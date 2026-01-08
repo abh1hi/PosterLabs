@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { Plus, LayoutTemplate, ShoppingBag, Sparkles, ArrowRight, Paintbrush, Folder } from 'lucide-vue-next'
-import '@material/web/button/filled-button.js'
-import '@material/web/button/outlined-button.js'
-import '@material/web/button/text-button.js'
+
 
 const router = useRouter()
 
@@ -35,21 +33,42 @@ const marketplaceItems = [
   <div class="h-screen bg-background text-on-surface overflow-y-auto">
       
       <!-- Navbar -->
-      <nav class="sticky top-0 z-50 bg-surface-low/80 backdrop-blur-md border-b border-outline/10 px-4 md:px-8 py-3 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-              <div class="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center text-primary">
-                  <Sparkles :size="20" />
+      <!-- Navbar -->
+      <nav class="sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline/10 px-6 md:px-12 py-4 flex items-center justify-between transition-all duration-300">
+          <div class="flex items-center gap-3 cursor-pointer group" @click="router.push('/')">
+              <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
+                  <Sparkles :size="20" class="fill-current" />
               </div>
-              <span class="title-medium font-bold">PosterLab</span>
+              <span class="title-large font-bold bg-clip-text text-transparent bg-gradient-to-r from-on-surface to-on-surface-variant group-hover:from-primary group-hover:to-secondary transition-all">PosterLab</span>
           </div>
-          <div class="hidden md:flex items-center gap-6">
-              <a href="#" class="label-large text-on-surface hover:text-primary transition">Inspiration</a>
-              <a href="#" class="label-large text-on-surface hover:text-primary transition">Features</a>
-              <a href="#" class="label-large text-on-surface hover:text-primary transition">Pricing</a>
+          
+          <div class="hidden md:flex items-center gap-8 bg-surface-container-low/50 px-6 py-2 rounded-full border border-outline/5 backdrop-blur-sm">
+              <a href="#" class="label-large font-medium text-on-surface-variant hover:text-primary transition-colors relative group">
+                  Inspiration
+                  <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary rounded-full transition-all group-hover:w-full"></span>
+              </a>
+              <a href="#" class="label-large font-medium text-on-surface-variant hover:text-primary transition-colors relative group">
+                  Features
+                  <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary rounded-full transition-all group-hover:w-full"></span>
+              </a>
+              <a href="#" class="label-large font-medium text-on-surface-variant hover:text-primary transition-colors relative group">
+                  Pricing
+                  <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary rounded-full transition-all group-hover:w-full"></span>
+              </a>
           </div>
-          <md-filled-button @click="() => navigateToEditor()">
-             Create Design
-          </md-filled-button>
+
+          <div class="flex items-center gap-4">
+              <button class="hidden md:block label-large font-bold text-on-surface hover:text-primary px-4 py-2 rounded-full hover:bg-surface-variant/50 transition-colors">
+                  Log In
+              </button>
+              <button 
+                  @click="() => navigateToEditor()"
+                  class="bg-primary text-on-primary px-6 py-2.5 rounded-full label-large font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all duration-300 flex items-center gap-2"
+              >
+                  <Plus :size="18" stroke-width="3" />
+                  <span>Create Design</span>
+              </button>
+          </div>
       </nav>
 
       <!-- Hero Section -->

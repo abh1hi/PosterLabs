@@ -180,6 +180,38 @@ export function useProjects() {
         }
     }
 
+    const renameProject = (id: string, newName: string) => {
+        if (!newName.trim()) return
+
+        try {
+            // Update individual project data
+            const key = PROJECT_PREFIX + id
+            const dataStr = localStorage.getItem(key)
+            if (dataStr) {
+                const data: ProjectData = JSON.parse(dataStr)
+                data.name = newName
+                data.updatedAt = Date.now()
+                localStorage.setItem(key, JSON.stringify(data))
+            }
+
+            // Update meta list
+            // Update meta list
+            const projectIndex = projects.value.findIndex(p => p.id === id)
+            if (projectIndex !== -1 && projects.value[projectIndex]) {
+                const project = projects.value[projectIndex]
+                project.name = newName
+                project.updatedAt = Date.now()
+                // Sort again? Maybe keep current sort or re-sort by updated
+                projects.value.sort((a, b) => b.updatedAt - a.updatedAt)
+                localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects.value))
+            }
+            showToast('Project renamed', 'success')
+        } catch (e) {
+            console.error('Rename failed', e)
+            showToast('Failed to rename project', 'error')
+        }
+    }
+
     const createNewProject = () => {
         if (!confirm('Start a new project? Unsaved changes will be lost.')) return
 
@@ -198,7 +230,7 @@ export function useProjects() {
     const createProjectFromImport = (data: any, fileName: string) => {
         try {
             // Basic Validation
-            if (!data.elements || !Array.isArray(data.elements)) {
+            if (!data || !data.elements || !Array.isArray(data.elements)) {
                 throw new Error('Invalid project file format')
             }
 
@@ -305,6 +337,7 @@ export function useProjects() {
         createProjectFromImport,
         createProjectFromJsonString,
         refreshProjects,
-        deleteProjects
+        deleteProjects,
+        renameProject
     }
 }
