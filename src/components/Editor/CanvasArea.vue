@@ -623,7 +623,7 @@ const endDrawing = () => {
     @touchend="handleTouchEnd"
     @wheel="handleWheel"
   >
-  >
+  
     <!-- Background Grid / Texture -->
     <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px]"></div>
 
