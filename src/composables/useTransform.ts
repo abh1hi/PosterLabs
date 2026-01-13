@@ -24,7 +24,7 @@ const initialStates = new Map<string, { x: number, y: number }>()
 let selectionBounds = { x: 0, y: 0, w: 0, h: 0 }
 
 export function useTransform() {
-    const { updateElement, updateStyle, elements, selectedIds } = useElements()
+    const { updateElement, updateStyle, elements, selectedIds, snapshotHistory } = useElements()
     const { scale, manualScale, posterSize } = useCanvas()
     const { guides, getSnappedPosition, clearGuides } = useSnapping()
 
@@ -143,7 +143,7 @@ export function useTransform() {
                 updateElement(id, {
                     x: state.x + dx,
                     y: state.y + dy
-                })
+                }, false) // Skip history during drag
             })
         } else if (transformType.value === 'resize') {
             clearGuides()
@@ -164,17 +164,20 @@ export function useTransform() {
                 ny = initialY + (initialHeight - nh)
             }
 
-            updateElement(activeId.value, { x: nx, y: ny })
-            updateStyle(activeId.value, { width: nw, height: nh })
+            updateElement(activeId.value, { x: nx, y: ny }, false)
+            updateStyle(activeId.value, { width: nw, height: nh }, false)
 
         } else if (transformType.value === 'rotate') {
             clearGuides()
             const rotationDelta = dx + dy
-            updateStyle(activeId.value, { rotate: initialRotate + rotationDelta })
+            updateStyle(activeId.value, { rotate: initialRotate + rotationDelta }, false)
         }
     }
 
     const endTransform = () => {
+        if (isTransforming.value) { // Only snapshot if we were actually doing something
+            snapshotHistory()
+        }
         isTransforming.value = false
         transformType.value = null
         activeId.value = null

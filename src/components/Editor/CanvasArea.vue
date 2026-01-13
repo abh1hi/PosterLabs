@@ -120,11 +120,16 @@ const lastTouchDistance = ref<number | null>(null)
 const lastTouchCenter = ref<{ x: number, y: number } | null>(null)
 const lastSingleTouch = ref<{ x: number, y: number } | null>(null)
 
-// One-Handed Zoom State
-const lastTapTime = ref(0)
-const isDoubleTapZooming = ref(false)
-const oneFingerZoomStartY = ref(0)
-const startScale = ref(1)
+// Gesture Detection State
+const touchStartTime = ref(0)
+const maxTouchCount = ref(0)
+const isGestureCancelled = ref(false)
+const longPressTimer = ref<any>(null)
+
+// Deadzone for 2-finger gestures (to allow taps)
+const startTwoFingerDist = ref<number | null>(null)
+const startTwoFingerCenter = ref<{ x: number, y: number } | null>(null)
+const isTwoFingerActive = ref(false)
 
 const getDistance = (t1: Touch, t2: Touch) => {
     const dx = t1.clientX - t2.clientX
@@ -139,45 +144,92 @@ const getCenter = (t1: Touch, t2: Touch) => {
     }
 }
 
+const { undo, redo } = useElements()
+
+const handleLongPress = (e: TouchEvent) => {
+    isGestureCancelled.value = true // Cancel tap if long press triggers
+    
+    // 1. Check if on an element (Not implemented fully without hit testing here, 
+    //    but we can rely on what element was under the finger - maybe)
+    //    For now, Global Long Press Actions:
+    
+    // Feedback
+    if ('vibrate' in navigator) navigator.vibrate(50)
+    
+    // Action: Reset Zoom (Fit to Screen) if on background
+    // Or maybe "Select Element" if we can detect it?
+    // Since hit testing is complex here without event target being the element directly, 
+    // let's assume if we are on background, we reset zoom.
+    
+    const isBackground = e.target === e.currentTarget || (e.target as HTMLElement).id === 'poster-content'
+    
+    if (isBackground) {
+        setActualSize() // Or resetZoom()
+    } else {
+        // Did we hit an element?
+        // Rely on 'Select' tool logic?
+        // For now, let's just make Long Press on background useful: "Fit to Screen"
+        resetZoom()
+    }
+}
+
 const handleTouchStart = (e: TouchEvent) => {
+    const now = Date.now()
+    
+    // Reset gesture tracking on new interaction sequence
+    if (e.touches.length === 1 && maxTouchCount.value === 0) {
+        touchStartTime.value = now
+        isGestureCancelled.value = false
+        maxTouchCount.value = 1
+        
+        // Start Long Press Timer
+        longPressTimer.value = setTimeout(() => handleLongPress(e), 500)
+        
+    } else {
+        // Multi-touch started -> Cancel long press
+        if (longPressTimer.value) clearTimeout(longPressTimer.value)
+        
+        // Track maximum number of fingers down during this interaction
+        maxTouchCount.value = Math.max(maxTouchCount.value, e.touches.length)
+    }
+
     // 1. Two Finger Gestures (Pinch / Pan)
     if (e.touches.length === 2) {
-        lastTouchDistance.value = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
-        lastTouchCenter.value = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
+        const dist = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
+        const center = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
+        
+        lastTouchDistance.value = dist
+        lastTouchCenter.value = center
+        
+        // Initialize deadzone tracking
+        startTwoFingerDist.value = dist
+        startTwoFingerCenter.value = center
+        isTwoFingerActive.value = false 
         return
     } 
     
     // 2. Single Finger Gestures
     if (e.touches.length === 1) {
         const touch = e.touches[0] as Touch
-        const now = Date.now()
-        const isBackground = e.target === e.currentTarget || (e.target as HTMLElement).id === 'poster-content' || (e.target as HTMLElement).id === 'poster-canvas-container'
-
-        // Double Tap Detection (for One-Handed Zoom)
-        if (now - lastTapTime.value < 300 && isBackground) {
-            // Double Tap Started -> Wait for drag to zoom
-            isDoubleTapZooming.value = true
-            oneFingerZoomStartY.value = touch.clientY
-            startScale.value = manualScale.value
-            e.preventDefault() // Prevent default double-tap zoom of browser
+        
+        if (activeTool.value === 'hand') {
+            lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
         } else {
-             // Single Tap
-             lastTapTime.value = now
-             
-             // If tool is Hand -> Start Pan
-             // If tool is Select -> Let it fall through to handleCanvasClick (handles both Selection and Marquee)
-             if (activeTool.value === 'hand') {
-                 lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
-             } else {
-                 handleCanvasClick(e)
-             }
+            handleCanvasClick(e)
         }
     }
 }
 
 const handleTouchMove = (e: TouchEvent) => {
+    // Cancel Long Press on any movement
+    if (longPressTimer.value) {
+        clearTimeout(longPressTimer.value)
+        longPressTimer.value = null
+    }
+
     if (isDragSelecting.value) {
          e.preventDefault()
+         isGestureCancelled.value = true 
          const contentRect = document.getElementById('poster-content')?.getBoundingClientRect()
          const touch = e.touches[0]
          if (contentRect && touch) {
@@ -191,14 +243,32 @@ const handleTouchMove = (e: TouchEvent) => {
              
              selectionBox.value = { x, y, w, h }
          }
-         return // Stop other gestures
+         return 
     }
 
     if (e.touches.length === 2) {
         e.preventDefault() // Prevent page scroll
 
-        // Pinch Zoom
         const dist = getDistance(e.touches[0] as Touch, e.touches[1] as Touch)
+        const center = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
+        
+        // Check Deadzone (Threshold 15px) prevents accidental cancellation of 'Tap'
+        if (!isTwoFingerActive.value) {
+            const distDelta = Math.abs(dist - (startTwoFingerDist.value || 0))
+            const moveDeltaX = Math.abs(center.x - (startTwoFingerCenter.value?.x || 0))
+            const moveDeltaY = Math.abs(center.y - (startTwoFingerCenter.value?.y || 0))
+            
+            if (distDelta > 15 || moveDeltaX > 15 || moveDeltaY > 15) {
+                isTwoFingerActive.value = true
+                isGestureCancelled.value = true // Now properly cancelled because we are moving
+            } else {
+                // Still in deadzone, update "last" values to prevent "jump" when we exit deadzone?
+                // Actually, if we update 'last', we lose the delta. Better to NOT update last values until active.
+                return 
+            }
+        }
+
+        // Pinch Zoom
         if (lastTouchDistance.value) {
             const zoomDelta = dist / lastTouchDistance.value
             manualScale.value = Math.min(Math.max(manualScale.value * zoomDelta, 0.2), 5)
@@ -206,7 +276,6 @@ const handleTouchMove = (e: TouchEvent) => {
         lastTouchDistance.value = dist
 
         // Two-Finger Pan
-        const center = getCenter(e.touches[0] as Touch, e.touches[1] as Touch)
         if (lastTouchCenter.value) {
             const dx = center.x - lastTouchCenter.value.x
             const dy = center.y - lastTouchCenter.value.y
@@ -216,40 +285,81 @@ const handleTouchMove = (e: TouchEvent) => {
         return
     } 
     
-    // One-Handed Zoom (Double Tap + Drag)
-    if (isDoubleTapZooming.value && e.touches.length === 1) {
-        e.preventDefault()
-        const touch = e.touches[0] as Touch
-        const dy = touch.clientY - oneFingerZoomStartY.value
-        
-        // Drag Down = Zoom In, Drag Up = Zoom Out (Standard Map Behavior)
-        // Sensitivity factor 0.005
-        const zoomFactor = 1 + (dy * 0.005)
-        manualScale.value = Math.min(Math.max(startScale.value * zoomFactor, 0.2), 5)
-        return
-    }
-
     // Single Finger Pan
     if (activeTool.value === 'hand' && lastSingleTouch.value && e.touches.length === 1) {
-        e.preventDefault() // Prevent pull-to-refresh / scrolling
+        e.preventDefault() 
         const touch = e.touches[0] as Touch
         const dx = touch.clientX - lastSingleTouch.value.x
         const dy = touch.clientY - lastSingleTouch.value.y
+        
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+             isGestureCancelled.value = true
+        }
+
         panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
         lastSingleTouch.value = { x: touch.clientX, y: touch.clientY }
+    } else if (activeTool.value !== 'hand' && e.touches.length === 1) {
+         // Check if moving significantly to cancel tap (e.g. dragging an element)
+         // We don't have start pos here easily unless we tracked it.
+         // But handleCanvasClick tracks drag selecting.
+         // Let's rely on basic logic: if we are here, we might be dragging.
+         // Ideally we should track start pos for checking cancel.
+         // For now, let's assume any move cancels strict tap.
+         isGestureCancelled.value = true
     }
 }
 
 const handleTouchEnd = (e: TouchEvent) => {
+    // Clear Timer
+    if (longPressTimer.value) {
+        clearTimeout(longPressTimer.value)
+        longPressTimer.value = null
+    }
+
+    const now = Date.now()
+    const gestureDuration = now - touchStartTime.value
+    
+    // Tap Gesture Recognition (only if all fingers lifted and duration was short)
+    if (e.touches.length === 0 && gestureDuration < 400 && !isGestureCancelled.value) {
+        if (maxTouchCount.value === 2) {
+            undo()
+            e.preventDefault()
+            
+            // Visual Feedback?
+            if ('vibrate' in navigator) navigator.vibrate(20)
+            
+        } else if (maxTouchCount.value === 3) {
+            redo()
+            // e.preventDefault() // preventDefault on touchEnd might affect click? 
+            // 3 fingers definitely not a click.
+            if ('vibrate' in navigator) navigator.vibrate(20)
+        }
+        
+        // Double Tap? (If maxTouch was 1, and we tapped twice?)
+        // Tracking double tap for maxTouch=1 requires state persistence between touches.
+        // Logic: if maxTouchCount==1 this time, and previous was maxTouchCount==1...
+        // IMPLEMENTATION:
+        // Use lastTapTime.
+        if (maxTouchCount.value === 1) {
+            // Is this a second tap?
+            // (We removed lastTapTime variable, checking if we should re-add simple double tap logic solely for UI actions)
+            // But user might just be selecting stuff quickly.
+            // Let's stick to Long Press for now.
+        }
+    }
+    
+    // Always reset state if all fingers are lifted
+    if (e.touches.length === 0) {
+        maxTouchCount.value = 0
+        isGestureCancelled.value = false // Also reset cancellation for next time
+    }
+
     if (isDragSelecting.value) {
         // Finalize Selection
         const box = selectionBox.value
-        // Simple AABB Intersection
         elements.value.forEach(el => {
-             // Element Rect (approx)
              const elW = el.style.width || 0
              const elH = el.style.height || 0
-             // Check overlapping
              const overlaps = !(
                 box.x > el.x + elW ||
                 box.x + box.w < el.x ||
@@ -258,7 +368,7 @@ const handleTouchEnd = (e: TouchEvent) => {
              )
              
              if (overlaps && !el.locked && !el.hidden) {
-                 toggleSelection(el.id, true) // Add to selection
+                 toggleSelection(el.id, true) 
              }
         })
         
@@ -273,7 +383,6 @@ const handleTouchEnd = (e: TouchEvent) => {
     
     if (e.touches.length === 0) {
         lastSingleTouch.value = null
-        isDoubleTapZooming.value = false
     }
 }
 

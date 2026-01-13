@@ -41,20 +41,14 @@ import { exportCanvas } from '../utils/exportManager'
 useKeyboard()
 
 // Auto-switch to properties on selection
-const previousTab = ref('design')
 import { watch } from 'vue'
-watch(selectedId, (newId) => {
+watch(selectedId, () => {
+    // [MODIFIED] Disabled auto-open. Now handled by suggestion FAB.
+    /*
     if (newId) {
-        if (activeTab.value !== 'properties') {
-            previousTab.value = activeTab.value
-            activeTab.value = 'properties'
-            isToolbarOpen.value = true
-        }
-    } else {
-        if (activeTab.value === 'properties') {
-             activeTab.value = previousTab.value
-        }
+        // ... (commented out code)
     }
+    */
 })
 
 const isExportMenuOpen = ref(false)
@@ -606,6 +600,18 @@ onMounted(() => {
             <!-- Canvas Area -->
             <CanvasArea />
         </div>
+
+        <!-- [Mobile] Suggestion FAB (Edit Properties) -->
+        <transition name="fade">
+            <button 
+                v-if="selectedId && activeTab !== 'properties'"
+                @click="toggleProperties"
+                class="md:hidden absolute top-20 right-4 z-[60] h-12 w-12 rounded-xl bg-surface-high border border-outline/10 text-on-surface shadow-xl flex items-center justify-center animate-in zoom-in slide-in-from-top-5 duration-300"
+            >
+                <Settings :size="24" />
+                <div class="absolute -top-1 -right-1 w-3 h-3 bg-error rounded-full border-2 border-surface"></div>
+            </button>
+        </transition>
 
         <!-- [Mobile] Bottom Navigation -->
         <!-- [Mobile] Bottom Navigation -->

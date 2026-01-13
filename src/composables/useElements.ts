@@ -91,17 +91,6 @@ const LOCAL_ELEMENTS_KEY = 'posterlab_elements'
 const history = ref<string[]>([])
 const historyPointer = ref(-1)
 
-const saveHistory = () => {
-    const state = JSON.stringify(elements.value)
-    if (historyPointer.value < history.value.length - 1) {
-        history.value = history.value.slice(0, historyPointer.value + 1)
-    }
-    if (history.value.length > 0 && history.value[history.value.length - 1] === state) return
-    history.value.push(state)
-    if (history.value.length > 50) history.value.shift()
-    historyPointer.value = history.value.length - 1
-}
-
 const isInitialized = ref(false)
 
 export interface UseElementsReturn {
@@ -110,8 +99,8 @@ export interface UseElementsReturn {
     selectedIds: typeof selectedIds
     toggleSelection: (id: string, multi: boolean) => void
     addElement: (el: Omit<CanvasElement, 'id'>) => void
-    updateElement: (id: string, updates: Partial<CanvasElement>) => void
-    updateStyle: (id: string, styleUpdates: Partial<ElementStyle>) => void
+    updateElement: (id: string, updates: Partial<CanvasElement>, saveToHistory?: boolean) => void
+    updateStyle: (id: string, styleUpdates: Partial<ElementStyle>, saveToHistory?: boolean) => void
     deleteElement: (id: string) => void
     duplicateElement: (id: string) => void
     moveElement: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void
@@ -125,13 +114,14 @@ export interface UseElementsReturn {
     groupSelection: () => void
     ungroupElement: () => void
     alignElements: (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom', canvasW: number, canvasH: number) => void
+    snapshotHistory: () => void
 }
 
 export function useElements(): UseElementsReturn {
     // --- Local Persistence ---
     const saveElements = () => {
         localStorage.setItem(LOCAL_ELEMENTS_KEY, JSON.stringify(elements.value))
-        saveHistory()
+        // History is now managed explicitly via snapshotHistory
     }
 
     const loadElements = () => {
@@ -140,6 +130,9 @@ export function useElements(): UseElementsReturn {
             try {
                 const parsed = JSON.parse(saved)
                 elements.value = parsed
+                // Initialize history with loaded state
+                history.value = [JSON.stringify(elements.value)]
+                historyPointer.value = 0
             } catch (e) { console.error('Failed to load elements', e) }
         }
     }
@@ -151,10 +144,8 @@ export function useElements(): UseElementsReturn {
         }
     })
 
-    // Auto-save on change
+    // Auto-save on change (Persistence only)
     watch(elements, () => {
-        // We only save if there's no active "action" that already calls saveElements
-        // But to be safe and simple, let's just debounce it.
         debouncedSave()
     }, { deep: true })
 
@@ -166,26 +157,39 @@ export function useElements(): UseElementsReturn {
         }, 500)
     }
 
+    const snapshotHistory = () => {
+        const state = JSON.stringify(elements.value)
+        // Avoid duplicate states
+        if (historyPointer.value >= 0 && history.value[historyPointer.value] === state) return
+
+        if (historyPointer.value < history.value.length - 1) {
+            history.value = history.value.slice(0, historyPointer.value + 1)
+        }
+        history.value.push(state)
+        if (history.value.length > 50) history.value.shift()
+        historyPointer.value = history.value.length - 1
+    }
+
     const addElement = (el: Omit<CanvasElement, 'id'>) => {
         const id = Date.now().toString()
         const defaultName = el.name || (el.type === 'text' ? 'Text Layer' : el.type === 'image' ? 'Image Layer' : el.type === 'shape' ? 'Shape Layer' : 'Layer')
         const newEl = { ...el, id, order: elements.value.length, name: defaultName }
         elements.value.push(newEl)
         selectedIds.value = [id]
-        saveElements()
+        snapshotHistory()
     }
 
-    const updateElement = (id: string, updates: Partial<CanvasElement>) => {
+    const updateElement = (id: string, updates: Partial<CanvasElement>, saveToHistory = true) => {
         const el = elements.value.find((e: CanvasElement) => e.id === id)
         if (el) {
             Object.assign(el, updates)
-            saveElements()
+            if (saveToHistory) snapshotHistory()
         }
     }
 
-    const commitHistory = () => saveHistory()
+    const commitHistory = () => snapshotHistory()
 
-    const updateStyle = (id: string, styleUpdates: Partial<ElementStyle>) => {
+    const updateStyle = (id: string, styleUpdates: Partial<ElementStyle>, saveToHistory = true) => {
         const el = elements.value.find((e: CanvasElement) => e.id === id)
         if (el) {
             if (styleUpdates.shadow && el.style.shadow) {
@@ -195,14 +199,14 @@ export function useElements(): UseElementsReturn {
                 styleUpdates.crop = { ...el.style.crop, ...styleUpdates.crop }
             }
             el.style = { ...el.style, ...styleUpdates }
-            saveElements()
+            if (saveToHistory) snapshotHistory()
         }
     }
 
     const deleteElement = (id: string) => {
         elements.value = elements.value.filter((e: CanvasElement) => e.id !== id)
         selectedIds.value = selectedIds.value.filter(selId => selId !== id)
-        saveElements()
+        snapshotHistory()
     }
 
     const duplicateElement = (id: string) => {
@@ -215,7 +219,7 @@ export function useElements(): UseElementsReturn {
             newEl.order = elements.value.length
             elements.value.push(newEl)
             selectedIds.value = [newEl.id]
-            saveElements()
+            snapshotHistory()
         }
     }
 
@@ -247,7 +251,7 @@ export function useElements(): UseElementsReturn {
         // Update order fields for all changed elements
         newElements.forEach((e: CanvasElement, i: number) => e.order = i)
         elements.value = newElements
-        saveElements()
+        snapshotHistory()
     }
 
     const reorderElement = (id: string, newIndex: number) => {
@@ -269,7 +273,7 @@ export function useElements(): UseElementsReturn {
 
         newElements.forEach((e, i) => e.order = i)
         elements.value = newElements
-        saveElements()
+        snapshotHistory()
     }
 
     const shuffleElements = () => {
@@ -287,7 +291,7 @@ export function useElements(): UseElementsReturn {
         // Re-assign order based on new array order
         newElements.forEach((e, i) => e.order = i)
         elements.value = newElements
-        saveElements()
+        snapshotHistory()
     }
 
     const groupSelection = () => {
@@ -347,7 +351,7 @@ export function useElements(): UseElementsReturn {
 
         // 6. Select the new group
         selectedIds.value = [groupId]
-        saveElements()
+        snapshotHistory()
     }
 
     const alignElements = (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom', canvasW: number, canvasH: number) => {
@@ -378,7 +382,7 @@ export function useElements(): UseElementsReturn {
             if (alignment === 'middle') el.y = (canvasH - h) / 2
             if (alignment === 'bottom') el.y = canvasH - h
 
-            saveElements()
+            snapshotHistory()
             return
         }
 
@@ -412,7 +416,7 @@ export function useElements(): UseElementsReturn {
             if (alignment === 'middle') el.y = centerY - h / 2
             if (alignment === 'bottom') el.y = maxY - h
         })
-        saveElements()
+        snapshotHistory()
     }
 
     const ungroupElement = () => {
@@ -450,7 +454,7 @@ export function useElements(): UseElementsReturn {
 
         // 3. Select all children
         selectedIds.value = restoredChildren.map(c => c.id)
-        saveElements()
+        snapshotHistory()
     }
 
     const undo = () => {
@@ -507,6 +511,7 @@ export function useElements(): UseElementsReturn {
         groupSelection,
         ungroupElement,
         alignElements,
+        snapshotHistory,
         canUndo: computed(() => historyPointer.value > 0),
         canRedo: computed(() => historyPointer.value < history.value.length - 1)
     }
